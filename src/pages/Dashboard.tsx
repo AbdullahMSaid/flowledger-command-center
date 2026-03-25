@@ -221,6 +221,9 @@ const Dashboard = () => {
                   </td>
                   <td className="px-5 py-3.5 text-right text-ink2">{flow.runsToday}</td>
                   <td className="px-5 py-3.5 text-right text-ink2">${flow.costToday.toFixed(2)}</td>
+                  <td className="px-5 py-3.5 text-right">
+                    <SimulateRunButton flowId={flow.id} />
+                  </td>
                 </tr>
               ))}
               {flows.length === 0 && (
