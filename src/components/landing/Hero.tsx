@@ -31,7 +31,7 @@ const Hero = () => {
             <a href="/signup" className="bg-primary text-primary-foreground px-7 py-3.5 rounded-lg text-[15px] font-medium tracking-tight hover:translate-y-[-1px] hover:shadow-[0_8px_24px_rgba(26,75,255,0.3)] transition-all">
               Get early access
             </a>
-            <a href="#" className="border border-border bg-card text-foreground px-7 py-3.5 rounded-lg text-[15px] hover:border-ink3 transition-colors">
+            <a href="/signup" className="border border-border bg-card text-foreground px-7 py-3.5 rounded-lg text-[15px] hover:border-ink3 transition-colors">
               View live demo
             </a>
           </div>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import AddFlowModal from "@/components/dashboard/AddFlowModal";
+import SimulateRunButton from "@/components/dashboard/SimulateRunButton";
 import SpendChart from "@/components/dashboard/SpendChart";
 import { formatDistanceToNow } from "date-fns";
 
@@ -195,6 +196,7 @@ const Dashboard = () => {
                 <th className="px-5 py-3 text-xs text-ink3 uppercase tracking-wider font-medium">Last Run</th>
                 <th className="px-5 py-3 text-xs text-ink3 uppercase tracking-wider font-medium text-right">Runs Today</th>
                 <th className="px-5 py-3 text-xs text-ink3 uppercase tracking-wider font-medium text-right">Cost Today</th>
+                <th className="px-5 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -219,11 +221,14 @@ const Dashboard = () => {
                   </td>
                   <td className="px-5 py-3.5 text-right text-ink2">{flow.runsToday}</td>
                   <td className="px-5 py-3.5 text-right text-ink2">${flow.costToday.toFixed(2)}</td>
+                  <td className="px-5 py-3.5 text-right">
+                    <SimulateRunButton flowId={flow.id} />
+                  </td>
                 </tr>
               ))}
               {flows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-8 text-center text-ink3">
+                  <td colSpan={8} className="px-5 py-8 text-center text-ink3">
                     No flows yet. Click "Add flow" to get started.
                   </td>
                 </tr>
