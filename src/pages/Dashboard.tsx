@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import AddFlowModal from "@/components/dashboard/AddFlowModal";
 import SimulateRunButton from "@/components/dashboard/SimulateRunButton";
+import BulkSimulateButton from "@/components/dashboard/BulkSimulateButton";
 import SpendChart from "@/components/dashboard/SpendChart";
 import { formatDistanceToNow } from "date-fns";
 
@@ -160,12 +161,15 @@ const Dashboard = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="font-display text-3xl tracking-tight">Dashboard</h1>
-          <button
-            onClick={() => setShowAddFlow(true)}
-            className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-medium tracking-tight hover:opacity-90 transition-opacity"
-          >
-            Add flow
-          </button>
+          <div className="flex items-center gap-3">
+            <BulkSimulateButton flowIds={flows.map((f) => f.id)} />
+            <button
+              onClick={() => setShowAddFlow(true)}
+              className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-medium tracking-tight hover:opacity-90 transition-opacity"
+            >
+              Add flow
+            </button>
+          </div>
         </div>
 
         {/* Metric cards */}
