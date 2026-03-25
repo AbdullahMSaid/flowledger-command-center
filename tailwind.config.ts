@@ -7,15 +7,15 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: "3rem",
       screens: {
-        "2xl": "1400px",
+        "2xl": "1200px",
       },
     },
     extend: {
       fontFamily: {
         display: ["DM Serif Display", "serif"],
-        body: ["Inter", "sans-serif"],
+        body: ["DM Sans", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -52,7 +52,9 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
         ink: "hsl(var(--ink))",
-        "warm-white": "hsl(var(--warm-white))",
+        ink2: "hsl(var(--ink2))",
+        ink3: "hsl(var(--ink3))",
+        surface: "hsl(var(--surface))",
         "electric-blue": "hsl(var(--electric-blue))",
         emerald: "hsl(var(--emerald))",
         "dark-surface": "hsl(var(--dark-surface))",
