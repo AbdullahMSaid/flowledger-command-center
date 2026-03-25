@@ -28,7 +28,7 @@ const Hero = () => {
             Track, govern, and optimize every automation, agent, and AI pipeline across your entire organization — from one unified platform.
           </p>
           <div className="flex items-center gap-3 flex-wrap">
-            <a href="#" className="bg-primary text-primary-foreground px-7 py-3.5 rounded-lg text-[15px] font-medium tracking-tight hover:translate-y-[-1px] hover:shadow-[0_8px_24px_rgba(26,75,255,0.3)] transition-all">
+            <a href="/signup" className="bg-primary text-primary-foreground px-7 py-3.5 rounded-lg text-[15px] font-medium tracking-tight hover:translate-y-[-1px] hover:shadow-[0_8px_24px_rgba(26,75,255,0.3)] transition-all">
               Get early access
             </a>
             <a href="#" className="border border-border bg-card text-foreground px-7 py-3.5 rounded-lg text-[15px] hover:border-ink3 transition-colors">
