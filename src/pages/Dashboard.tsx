@@ -228,7 +228,7 @@ const Dashboard = () => {
               ))}
               {flows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-8 text-center text-ink3">
+                  <td colSpan={8} className="px-5 py-8 text-center text-ink3">
                     No flows yet. Click "Add flow" to get started.
                   </td>
                 </tr>
