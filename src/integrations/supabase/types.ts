@@ -14,7 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      flows: {
+        Row: {
+          created_at: string
+          id: string
+          model: string
+          name: string
+          platform: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          model: string
+          name: string
+          platform: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          model?: string
+          name?: string
+          platform?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      runs: {
+        Row: {
+          cost_usd: number
+          created_at: string
+          duration_ms: number
+          error_message: string | null
+          flow_id: string
+          id: string
+          status: string
+          token_count: number
+        }
+        Insert: {
+          cost_usd: number
+          created_at?: string
+          duration_ms: number
+          error_message?: string | null
+          flow_id: string
+          id?: string
+          status: string
+          token_count: number
+        }
+        Update: {
+          cost_usd?: number
+          created_at?: string
+          duration_ms?: number
+          error_message?: string | null
+          flow_id?: string
+          id?: string
+          status?: string
+          token_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "runs_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
