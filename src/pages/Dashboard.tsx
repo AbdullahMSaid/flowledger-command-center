@@ -196,6 +196,7 @@ const Dashboard = () => {
                 <th className="px-5 py-3 text-xs text-ink3 uppercase tracking-wider font-medium">Last Run</th>
                 <th className="px-5 py-3 text-xs text-ink3 uppercase tracking-wider font-medium text-right">Runs Today</th>
                 <th className="px-5 py-3 text-xs text-ink3 uppercase tracking-wider font-medium text-right">Cost Today</th>
+                <th className="px-5 py-3"></th>
               </tr>
             </thead>
             <tbody>
