@@ -1,30 +1,35 @@
 const stats = [
-  { value: "$847B", label: "AI market by 2030" },
-  { value: "73%", label: "of enterprises have no AI governance" },
-  { value: "11×", label: "YoY growth in workflow volume" },
-  { value: "$0", label: "dominant competitor exists today" },
+  { num: "$847B", label: "Global AI software market by 2030" },
+  { num: "73%", label: "Of enterprises have no AI governance today" },
+  { num: "11×", label: "YoY growth in enterprise AI workflow volume" },
+  { num: "$0", label: "Dominant player in AI Ops category today" },
 ];
 
 const MarketSection = () => {
   return (
-    <section className="bg-dark-surface text-dark-surface-foreground py-24">
-      <div className="container space-y-16">
-        <h2 className="font-display text-4xl lg:text-5xl text-center max-w-3xl mx-auto leading-tight">
-          Every enterprise will need an AI Ops layer within 24 months.
+    <section className="bg-foreground text-white py-24 px-12">
+      <div className="container px-0">
+        <div className="text-xs font-medium tracking-[2px] uppercase text-white/40 mb-4">
+          The opportunity
+        </div>
+        <h2 className="font-display text-5xl leading-[1.08] tracking-tight mb-12 max-w-[640px]">
+          Every enterprise will need an{" "}
+          <em className="text-[#7EB5FF]">AI Ops layer</em> within 24 months
         </h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-12">
-          {stats.map((stat) => (
-            <div key={stat.label} className="space-y-2">
-              <p className="font-display text-4xl text-emerald">{stat.value}</p>
-              <p className="text-sm text-dark-surface-foreground/70">{stat.label}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
+          {stats.map((s) => (
+            <div key={s.num} className="border-l-2 border-white/10 pl-5">
+              <div className="font-display text-[40px] leading-none">{s.num}</div>
+              <div className="text-[13px] text-white/50 mt-1.5">{s.label}</div>
             </div>
           ))}
         </div>
-        <blockquote className="border-l-2 border-electric-blue pl-6 max-w-2xl mx-auto">
-          <p className="text-lg italic text-dark-surface-foreground/80">
-            "FlowLedger is building the Datadog for AI operations — a category that doesn't have a clear leader yet, but will be essential infrastructure for every company running AI at scale."
-          </p>
-        </blockquote>
+        <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-8 max-w-[640px]">
+          <blockquote className="font-display text-xl leading-relaxed text-white/85 italic mb-4">
+            "The next Datadog won't monitor servers. It will monitor AI. FlowLedger is building that layer before anyone else realizes the category exists."
+          </blockquote>
+          <cite className="text-[13px] text-white/40 not-italic">— Positioning thesis, Q1 2026</cite>
+        </div>
       </div>
     </section>
   );
