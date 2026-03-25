@@ -1,32 +1,28 @@
-import { Button } from "@/components/ui/button";
-
 const navLinks = ["Product", "Integrations", "Pricing", "Docs"];
 
 const Navbar = () => {
   return (
-    <nav className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-10">
-          <a href="/" className="font-display text-xl text-foreground">
-            FlowLedger
-          </a>
-          <ul className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <li key={link}>
-                <a
-                  href={`#${link.toLowerCase()}`}
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {link}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <Button variant="nav" size="sm">
-          Start free →
-        </Button>
+    <nav className="sticky top-0 z-50 flex items-center justify-between px-12 py-5 border-b border-border bg-surface/92 backdrop-blur-[12px]">
+      <div className="font-display text-[22px] tracking-tight">
+        Flow<span className="text-electric-blue">Ledger</span>
       </div>
+      <div className="hidden md:flex items-center gap-8">
+        {navLinks.map((link) => (
+          <a
+            key={link}
+            href={`#${link.toLowerCase()}`}
+            className="text-sm text-ink2 hover:text-foreground transition-colors"
+          >
+            {link}
+          </a>
+        ))}
+      </div>
+      <a
+        href="#"
+        className="bg-foreground text-background px-5 py-2.5 rounded-lg text-sm font-medium tracking-tight hover:opacity-90 transition-opacity"
+      >
+        Start free →
+      </a>
     </nav>
   );
 };

@@ -1,13 +1,11 @@
 const Footer = () => {
   return (
-    <footer className="border-t border-border py-10">
-      <div className="container flex flex-col sm:flex-row items-center justify-between gap-4">
-        <span className="font-display text-lg text-foreground">FlowLedger</span>
-        <div className="flex items-center gap-6 text-sm text-muted-foreground">
-          <span>© {new Date().getFullYear()} FlowLedger, Inc.</span>
-          <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
-          <a href="#" className="hover:text-foreground transition-colors">Terms</a>
-        </div>
+    <footer className="border-t border-border py-8 px-12 flex items-center justify-between bg-card">
+      <div className="font-display text-lg">
+        Flow<span className="text-electric-blue">Ledger</span>
+      </div>
+      <div className="text-[13px] text-ink3">
+        © {new Date().getFullYear()} FlowLedger, Inc. · Privacy · Terms
       </div>
     </footer>
   );

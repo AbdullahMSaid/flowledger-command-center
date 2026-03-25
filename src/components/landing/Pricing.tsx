@@ -1,50 +1,45 @@
-import { Button } from "@/components/ui/button";
-
 const tiers = [
   {
-    name: "Starter",
-    price: "$49",
-    period: "/mo",
-    cta: "Start free trial",
-    highlighted: false,
+    tier: "Starter",
+    price: "49",
+    period: "per month",
+    cta: "Get started",
+    featured: false,
     features: [
-      "Up to 50 workflows",
-      "3 integrations",
-      "7-day log retention",
+      "Up to 25 active flows",
+      "5 integrations",
+      "7-day audit history",
       "Email alerts",
-      "Community support",
     ],
   },
   {
-    name: "Growth",
-    price: "$249",
-    period: "/mo",
+    tier: "Growth",
+    price: "249",
+    period: "per month",
     cta: "Start free trial",
-    highlighted: true,
-    badge: "Most popular",
+    featured: true,
     features: [
-      "Unlimited workflows",
-      "Unlimited integrations",
-      "90-day log retention",
-      "Cost guardrails & budgets",
-      "Compliance policies",
-      "Slack & PagerDuty alerts",
-      "Priority support",
+      "Unlimited flows",
+      "All integrations",
+      "90-day audit history",
+      "Spend optimization",
+      "Slack + PagerDuty alerts",
+      "Workflow marketplace",
     ],
   },
   {
-    name: "Enterprise",
+    tier: "Enterprise",
     price: "Custom",
-    period: "",
+    period: "contact us",
     cta: "Talk to sales",
-    highlighted: false,
+    featured: false,
     features: [
       "Everything in Growth",
-      "SSO & SCIM",
-      "Audit logs",
-      "Custom data retention",
-      "Dedicated CSM",
-      "SLA guarantee",
+      "SOC 2 & GDPR audit logs",
+      "SSO & role-based access",
+      "Dedicated SLA",
+      "Custom integrations",
+      "AI spend negotiation",
     ],
   },
 ];
@@ -52,46 +47,62 @@ const tiers = [
 const Pricing = () => {
   return (
     <section className="container py-24" id="pricing">
-      <h2 className="font-display text-4xl text-foreground mb-4 text-center">
+      <div className="text-xs font-medium tracking-[2px] uppercase text-electric-blue mb-4 text-center">
         Pricing
+      </div>
+      <h2 className="font-display text-[42px] leading-[1.1] tracking-tight text-center mb-4">
+        Simple, usage-based pricing
       </h2>
-      <p className="text-muted-foreground text-center mb-16 max-w-lg mx-auto">
-        Start free. Scale when you're ready. No credit card required.
+      <p className="text-base text-ink2 text-center font-light mb-16 max-w-[560px] mx-auto">
+        Start free. Scale as your AI footprint grows.
       </p>
-      <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-        {tiers.map((tier) => (
+      <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        {tiers.map((t) => (
           <div
-            key={tier.name}
-            className={`relative rounded-lg border p-8 flex flex-col ${
-              tier.highlighted
-                ? "border-primary shadow-lg shadow-primary/10"
+            key={t.tier}
+            className={`relative bg-card border rounded-2xl p-8 flex flex-col ${
+              t.featured
+                ? "border-2 border-primary bg-[#F7F9FF]"
                 : "border-border"
             }`}
           >
-            {tier.badge && (
-              <span className="absolute -top-3 left-6 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-sm">
-                {tier.badge}
+            {t.featured && (
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[11px] font-medium px-3.5 py-1 rounded-full whitespace-nowrap tracking-wider">
+                Most popular
               </span>
             )}
-            <h3 className="font-display text-2xl text-foreground">{tier.name}</h3>
-            <div className="mt-4 mb-6">
-              <span className="text-4xl font-bold font-body text-foreground">{tier.price}</span>
-              <span className="text-muted-foreground">{tier.period}</span>
+            <div className="text-xs font-medium tracking-[1.5px] uppercase text-ink3 mb-3">
+              {t.tier}
             </div>
-            <ul className="space-y-3 mb-8 flex-1">
-              {tier.features.map((feature) => (
-                <li key={feature} className="text-sm text-muted-foreground flex items-start gap-2">
-                  <span className="text-emerald mt-0.5">✓</span>
-                  {feature}
+            <div className="font-display leading-none mb-1">
+              {t.price === "Custom" ? (
+                <span className="text-[32px]">{t.price}</span>
+              ) : (
+                <span className="text-[42px]">
+                  <sup className="text-lg align-top font-body">$</sup>
+                  {t.price}
+                </span>
+              )}
+            </div>
+            <div className="text-[13px] text-ink3 mb-6">{t.period}</div>
+            <ul className="flex flex-col gap-2.5 mb-7 flex-1">
+              {t.features.map((f) => (
+                <li key={f} className="text-sm text-ink2 pl-5 relative">
+                  <span className="absolute left-0 text-emerald font-medium">✓</span>
+                  {f}
                 </li>
               ))}
             </ul>
-            <Button
-              variant={tier.highlighted ? "hero" : "hero-outline"}
-              className="w-full"
+            <a
+              href="#"
+              className={`block text-center py-2.5 rounded-lg text-sm font-medium transition-all ${
+                t.featured
+                  ? "bg-primary text-primary-foreground hover:opacity-90"
+                  : "border border-border text-foreground hover:border-ink3"
+              }`}
             >
-              {tier.cta}
-            </Button>
+              {t.cta}
+            </a>
           </div>
         ))}
       </div>
