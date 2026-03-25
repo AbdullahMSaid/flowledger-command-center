@@ -48,8 +48,8 @@ const FlowDetail = () => {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
-  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-  const webhookUrl = `https://${projectId}.supabase.co/functions/v1/ingest/${id}`;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const webhookUrl = `${supabaseUrl}/functions/v1/ingest/${id}`;
 
   const fetchData = useCallback(async () => {
     if (!id || !user) return;
