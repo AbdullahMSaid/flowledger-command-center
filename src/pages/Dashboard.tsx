@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import AddFlowModal from "@/components/dashboard/AddFlowModal";
 import SimulateRunButton from "@/components/dashboard/SimulateRunButton";
+import BulkSimulateButton from "@/components/dashboard/BulkSimulateButton";
 import SpendChart from "@/components/dashboard/SpendChart";
 import { formatDistanceToNow } from "date-fns";
 
