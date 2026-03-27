@@ -18,7 +18,7 @@ const steps = [
 
 const HowItWorks = () => {
   return (
-    <section className="container py-24">
+    <section id="docs" className="container py-24">
       <div className="text-xs font-medium tracking-[2px] uppercase text-electric-blue mb-4 text-center">
         How it works
       </div>
