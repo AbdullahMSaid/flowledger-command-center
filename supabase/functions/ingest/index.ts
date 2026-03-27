@@ -59,10 +59,10 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch the flow with enabled and budget info
+    // Fetch the flow with enabled, budget, and owner info
     const { data: flow, error: flowError } = await supabase
       .from("flows")
-      .select("id, flow_enabled, budget_limit")
+      .select("id, flow_enabled, budget_limit, user_id, name")
       .eq("id", flowId)
       .single();
 
