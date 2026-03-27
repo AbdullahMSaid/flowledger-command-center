@@ -5,6 +5,7 @@ const tiers = [
     period: "per month",
     cta: "Get started",
     featured: false,
+    highlight: "Monitor up to $500/mo in AI spend",
     features: [
       "Up to 25 active flows",
       "5 integrations",
@@ -18,6 +19,7 @@ const tiers = [
     period: "per month",
     cta: "Start free trial",
     featured: true,
+    highlight: "Monitor up to $10,000/mo in AI spend",
     features: [
       "Unlimited flows",
       "All integrations",
@@ -33,6 +35,7 @@ const tiers = [
     period: "contact us",
     cta: "Talk to sales",
     featured: false,
+    highlight: "Unlimited AI spend monitoring",
     features: [
       "Everything in Growth",
       "SOC 2 & GDPR audit logs",
@@ -84,7 +87,8 @@ const Pricing = () => {
                 </span>
               )}
             </div>
-            <div className="text-[13px] text-ink3 mb-6">{t.period}</div>
+            <div className="text-[13px] text-ink3 mb-3">{t.period}</div>
+            <div className="text-[13px] text-primary font-medium mb-6">{t.highlight}</div>
             <ul className="flex flex-col gap-2.5 mb-7 flex-1">
               {t.features.map((f) => (
                 <li key={f} className="text-sm text-ink2 pl-5 relative">
