@@ -9,7 +9,7 @@ const IntegrationStrip = () => {
         </span>
         <div className="flex items-center gap-10 flex-wrap">
           {integrations.map((name) => (
-            <span key={name} className="text-base font-medium text-ink3 tracking-tight opacity-50">
+            <span key={name} className="text-base font-medium text-foreground/60 tracking-tight">
               {name}
             </span>
           ))}

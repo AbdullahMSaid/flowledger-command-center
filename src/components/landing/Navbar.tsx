@@ -1,19 +1,24 @@
-const navLinks = ["Product", "Integrations", "Pricing", "Docs"];
+const navLinks = [
+  { label: "Product", href: "#product" },
+  { label: "Integrations", href: "#integrations" },
+  { label: "Pricing", href: "#pricing" },
+  { label: "Docs", href: "#docs" },
+];
 
 const Navbar = () => {
   return (
     <nav className="sticky top-0 z-50 flex items-center justify-between px-12 py-5 border-b border-border bg-surface/92 backdrop-blur-[12px]">
-      <div className="font-display text-[22px] tracking-tight">
+      <a href="/" className="font-display text-[22px] tracking-tight">
         Flow<span className="text-electric-blue">Ledger</span>
-      </div>
+      </a>
       <div className="hidden md:flex items-center gap-8">
         {navLinks.map((link) => (
           <a
-            key={link}
-            href={`#${link.toLowerCase()}`}
+            key={link.label}
+            href={link.href}
             className="text-sm text-ink2 hover:text-foreground transition-colors"
           >
-            {link}
+            {link.label}
           </a>
         ))}
       </div>

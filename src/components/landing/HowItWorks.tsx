@@ -31,7 +31,7 @@ const HowItWorks = () => {
       <div className="grid md:grid-cols-3 gap-8">
         {steps.map((step) => (
           <div key={step.num} className="p-8 bg-card border border-border rounded-2xl">
-            <div className="font-display text-5xl text-primary/10 leading-none mb-3">
+            <div className="font-display text-5xl text-primary/30 leading-none mb-3">
               {step.num}
             </div>
             <h3 className="text-[17px] font-medium text-foreground tracking-tight mb-2 font-body">
