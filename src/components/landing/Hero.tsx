@@ -9,7 +9,7 @@ const flows = [
 
 const Hero = () => {
   return (
-    <section className="container py-24 lg:py-[100px]">
+    <section id="product" className="container py-24 lg:py-[100px]">
       <div className="grid lg:grid-cols-2 gap-20 items-center">
         <div>
           <div className="inline-flex items-center gap-2 bg-[#EEF3FF] border border-primary/15 rounded-full pl-[5px] pr-3.5 py-[5px] mb-4">
