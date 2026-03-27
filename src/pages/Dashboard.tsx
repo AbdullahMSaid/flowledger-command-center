@@ -8,7 +8,7 @@ import SimulateRunButton from "@/components/dashboard/SimulateRunButton";
 import BulkSimulateButton from "@/components/dashboard/BulkSimulateButton";
 import SpendChart from "@/components/dashboard/SpendChart";
 import { formatDistanceToNow } from "date-fns";
-import { Pause, Play, DollarSign, Bell } from "lucide-react";
+import { Pause, Play, DollarSign, Bell, BarChart3 } from "lucide-react";
 
 type FlowWithStats = {
   id: string;
