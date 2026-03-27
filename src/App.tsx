@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard.tsx";
 import FlowDetail from "./pages/FlowDetail.tsx";
 import Alerts from "./pages/Alerts.tsx";
 import Analytics from "./pages/Analytics.tsx";
+import Docs from "./pages/Docs.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/flows/:id" element={<FlowDetail />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/docs" element={<Docs />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

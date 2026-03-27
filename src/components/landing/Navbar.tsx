@@ -2,7 +2,7 @@ const navLinks = [
   { label: "Product", href: "#product" },
   { label: "Integrations", href: "#integrations" },
   { label: "Pricing", href: "#pricing" },
-  { label: "Docs", href: "#docs" },
+  { label: "Docs", href: "/docs" },
 ];
 
 const Navbar = () => {
