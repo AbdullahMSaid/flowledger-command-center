@@ -3,23 +3,29 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import AddFlowModal from "@/components/dashboard/AddFlowModal";
+import SetBudgetModal from "@/components/dashboard/SetBudgetModal";
 import SimulateRunButton from "@/components/dashboard/SimulateRunButton";
 import BulkSimulateButton from "@/components/dashboard/BulkSimulateButton";
 import SpendChart from "@/components/dashboard/SpendChart";
 import { formatDistanceToNow } from "date-fns";
+import { Pause, Play, DollarSign } from "lucide-react";
 
 type FlowWithStats = {
   id: string;
   name: string;
   platform: string;
   model: string;
-  status: "Live" | "Degraded" | "Error";
+  status: "Live" | "Degraded" | "Error" | "Paused";
   lastRun: string | null;
   runsToday: number;
   costToday: number;
+  flow_enabled: boolean;
+  budget_limit: number | null;
+  monthlySpend: number;
 };
 
-function computeStatus(runs: { status: string }[]): "Live" | "Degraded" | "Error" {
+function computeStatus(runs: { status: string }[], enabled: boolean): "Live" | "Degraded" | "Error" | "Paused" {
+  if (!enabled) return "Paused";
   if (runs.length === 0) return "Live";
   if (runs[0].status === "error") return "Error";
   const errorRate = runs.filter((r) => r.status === "error").length / runs.length;
@@ -27,10 +33,11 @@ function computeStatus(runs: { status: string }[]): "Live" | "Degraded" | "Error
   return "Live";
 }
 
-const statusStyles = {
-  Live: "bg-[#E6FBF4] text-[#0A7A57]",
-  Degraded: "bg-[#FFF8E6] text-[#8B6000]",
-  Error: "bg-[#FFF0F0] text-[#A32D2D]",
+const statusStyles: Record<string, string> = {
+  Live: "bg-[hsl(160,60%,95%)] text-[hsl(160,80%,28%)]",
+  Degraded: "bg-[hsl(40,100%,93%)] text-[hsl(40,80%,30%)]",
+  Error: "bg-[hsl(0,80%,95%)] text-[hsl(0,50%,40%)]",
+  Paused: "bg-secondary text-muted-foreground",
 };
 
 const Dashboard = () => {
@@ -40,15 +47,19 @@ const Dashboard = () => {
   const [runsToday, setRunsToday] = useState(0);
   const [spendToday, setSpendToday] = useState(0);
   const [showAddFlow, setShowAddFlow] = useState(false);
+  const [budgetFlow, setBudgetFlow] = useState<FlowWithStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+
   const fetchData = useCallback(async () => {
     if (!user) return;
 
-    // Fetch flows
     const { data: flowsData } = await supabase
       .from("flows")
       .select("*")
@@ -57,7 +68,6 @@ const Dashboard = () => {
 
     if (!flowsData) return;
 
-    // For each flow, fetch last 10 runs and today's stats
     const enriched: FlowWithStats[] = await Promise.all(
       flowsData.map(async (flow) => {
         const { data: last10 } = await supabase
@@ -73,8 +83,15 @@ const Dashboard = () => {
           .eq("flow_id", flow.id)
           .gte("created_at", todayStart.toISOString());
 
-        const status = computeStatus(last10 || []);
+        const { data: monthRuns } = await supabase
+          .from("runs")
+          .select("cost_usd")
+          .eq("flow_id", flow.id)
+          .gte("created_at", monthStart.toISOString());
+
+        const status = computeStatus(last10 || [], flow.flow_enabled);
         const lastRunTime = last10?.[0]?.created_at || null;
+        const monthlySpend = (monthRuns || []).reduce((sum, r) => sum + Number(r.cost_usd), 0);
 
         return {
           id: flow.id,
@@ -85,19 +102,20 @@ const Dashboard = () => {
           lastRun: lastRunTime,
           runsToday: todayRuns?.length || 0,
           costToday: todayRuns?.reduce((sum, r) => sum + Number(r.cost_usd), 0) || 0,
+          flow_enabled: flow.flow_enabled,
+          budget_limit: flow.budget_limit,
+          monthlySpend,
         };
       })
     );
 
     setFlows(enriched);
 
-    // Aggregate today's metrics
     const { data: allTodayRuns } = await supabase
       .from("runs")
       .select("cost_usd, flow_id")
       .gte("created_at", todayStart.toISOString());
 
-    // Filter to only user's flows
     const userFlowIds = new Set(flowsData.map((f) => f.id));
     const userTodayRuns = (allTodayRuns || []).filter((r) => userFlowIds.has(r.flow_id));
 
@@ -110,31 +128,25 @@ const Dashboard = () => {
     fetchData();
   }, [fetchData]);
 
-  // Realtime subscription
   useEffect(() => {
     if (!user) return;
-
     const channel = supabase
       .channel("runs-realtime")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "runs" },
-        () => {
-          // Re-fetch all data on any new run
-          fetchData();
-        }
-      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "runs" }, () => fetchData())
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [user, fetchData]);
+
+  const toggleFlowEnabled = async (flowId: string, currentEnabled: boolean, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await supabase.from("flows").update({ flow_enabled: !currentEnabled }).eq("id", flowId);
+    fetchData();
+  };
 
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-ink2">Loading...</p>
+        <p className="text-muted-foreground">Loading...</p>
       </div>
     );
   }
@@ -147,11 +159,8 @@ const Dashboard = () => {
           Flow<span className="text-primary">Ledger</span>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-ink3">{user?.email}</span>
-          <button
-            onClick={signOut}
-            className="text-sm text-ink2 hover:text-foreground transition-colors"
-          >
+          <span className="text-sm text-muted-foreground">{user?.email}</span>
+          <button onClick={signOut} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Sign out
           </button>
         </div>
@@ -175,15 +184,15 @@ const Dashboard = () => {
         {/* Metric cards */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="border border-border rounded-xl px-5 py-4 bg-card">
-            <div className="text-xs text-ink3 uppercase tracking-wider mb-1">Active Flows</div>
-            <div className="text-2xl font-display">{flows.length}</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Active Flows</div>
+            <div className="text-2xl font-display">{flows.filter(f => f.flow_enabled).length}</div>
           </div>
           <div className="border border-border rounded-xl px-5 py-4 bg-card">
-            <div className="text-xs text-ink3 uppercase tracking-wider mb-1">Runs Today</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Runs Today</div>
             <div className="text-2xl font-display">{runsToday}</div>
           </div>
           <div className="border border-border rounded-xl px-5 py-4 bg-card">
-            <div className="text-xs text-ink3 uppercase tracking-wider mb-1">Spend Today</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Spend Today</div>
             <div className="text-2xl font-display">${spendToday.toFixed(2)}</div>
           </div>
         </div>
@@ -193,46 +202,95 @@ const Dashboard = () => {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left">
-                <th className="px-5 py-3 text-xs text-ink3 uppercase tracking-wider font-medium">Name</th>
-                <th className="px-5 py-3 text-xs text-ink3 uppercase tracking-wider font-medium">Platform</th>
-                <th className="px-5 py-3 text-xs text-ink3 uppercase tracking-wider font-medium">Model</th>
-                <th className="px-5 py-3 text-xs text-ink3 uppercase tracking-wider font-medium">Status</th>
-                <th className="px-5 py-3 text-xs text-ink3 uppercase tracking-wider font-medium">Last Run</th>
-                <th className="px-5 py-3 text-xs text-ink3 uppercase tracking-wider font-medium text-right">Runs Today</th>
-                <th className="px-5 py-3 text-xs text-ink3 uppercase tracking-wider font-medium text-right">Cost Today</th>
+                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium w-8"></th>
+                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Name</th>
+                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Platform</th>
+                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Status</th>
+                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Budget</th>
+                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Last Run</th>
+                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">Runs Today</th>
+                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">Cost Today</th>
                 <th className="px-5 py-3"></th>
               </tr>
             </thead>
             <tbody>
-              {flows.map((flow) => (
-                <tr
-                  key={flow.id}
-                  onClick={() => navigate(`/flows/${flow.id}`)}
-                  className="border-b border-border last:border-0 cursor-pointer hover:bg-muted/30 transition-colors"
-                >
-                  <td className="px-5 py-3.5 font-medium text-foreground">{flow.name}</td>
-                  <td className="px-5 py-3.5 text-ink2">{flow.platform}</td>
-                  <td className="px-5 py-3.5 text-ink2">{flow.model}</td>
-                  <td className="px-5 py-3.5">
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusStyles[flow.status]}`}>
-                      {flow.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 text-ink3">
-                    {flow.lastRun
-                      ? formatDistanceToNow(new Date(flow.lastRun), { addSuffix: true })
-                      : "Never"}
-                  </td>
-                  <td className="px-5 py-3.5 text-right text-ink2">{flow.runsToday}</td>
-                  <td className="px-5 py-3.5 text-right text-ink2">${flow.costToday.toFixed(2)}</td>
-                  <td className="px-5 py-3.5 text-right">
-                    <SimulateRunButton flowId={flow.id} />
-                  </td>
-                </tr>
-              ))}
+              {flows.map((flow) => {
+                const budgetPct = flow.budget_limit ? Math.min((flow.monthlySpend / flow.budget_limit) * 100, 100) : null;
+                const budgetColor = budgetPct !== null
+                  ? budgetPct >= 90 ? "bg-destructive" : budgetPct >= 70 ? "bg-[hsl(40,90%,50%)]" : "bg-accent"
+                  : "";
+
+                return (
+                  <tr
+                    key={flow.id}
+                    onClick={() => navigate(`/flows/${flow.id}`)}
+                    className="border-b border-border last:border-0 cursor-pointer hover:bg-muted/30 transition-colors"
+                  >
+                    {/* Pause/Resume toggle */}
+                    <td className="pl-5 py-3.5">
+                      <button
+                        onClick={(e) => toggleFlowEnabled(flow.id, flow.flow_enabled, e)}
+                        title={flow.flow_enabled ? "Pause flow" : "Resume flow"}
+                        className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                      >
+                        {flow.flow_enabled ? <Pause size={14} /> : <Play size={14} />}
+                      </button>
+                    </td>
+                    <td className="px-5 py-3.5 font-medium text-foreground">{flow.name}</td>
+                    <td className="px-5 py-3.5 text-muted-foreground">{flow.platform}</td>
+                    <td className="px-5 py-3.5">
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusStyles[flow.status]}`}>
+                        {flow.status}
+                      </span>
+                    </td>
+                    {/* Budget column */}
+                    <td className="px-5 py-3.5">
+                      {flow.budget_limit !== null ? (
+                        <div className="flex flex-col gap-1 min-w-[100px]">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>${flow.monthlySpend.toFixed(2)}</span>
+                            <span>${flow.budget_limit.toFixed(2)}</span>
+                          </div>
+                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${budgetColor}`}
+                              style={{ width: `${budgetPct}%` }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setBudgetFlow(flow); }}
+                          className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                        >
+                          <DollarSign size={12} />
+                          Set budget
+                        </button>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 text-muted-foreground">
+                      {flow.lastRun
+                        ? formatDistanceToNow(new Date(flow.lastRun), { addSuffix: true })
+                        : "Never"}
+                    </td>
+                    <td className="px-5 py-3.5 text-right text-muted-foreground">{flow.runsToday}</td>
+                    <td className="px-5 py-3.5 text-right text-muted-foreground">${flow.costToday.toFixed(2)}</td>
+                    <td className="px-5 py-3.5 text-right flex items-center justify-end gap-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setBudgetFlow(flow); }}
+                        title="Set budget"
+                        className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                      >
+                        <DollarSign size={14} />
+                      </button>
+                      <SimulateRunButton flowId={flow.id} />
+                    </td>
+                  </tr>
+                );
+              })}
               {flows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-8 text-center text-ink3">
+                  <td colSpan={9} className="px-5 py-8 text-center text-muted-foreground">
                     No flows yet. Click "Add flow" to get started.
                   </td>
                 </tr>
@@ -248,10 +306,17 @@ const Dashboard = () => {
       {showAddFlow && (
         <AddFlowModal
           onClose={() => setShowAddFlow(false)}
-          onCreated={() => {
-            setShowAddFlow(false);
-            fetchData();
-          }}
+          onCreated={() => { setShowAddFlow(false); fetchData(); }}
+        />
+      )}
+
+      {budgetFlow && (
+        <SetBudgetModal
+          flowId={budgetFlow.id}
+          flowName={budgetFlow.name}
+          currentBudget={budgetFlow.budget_limit}
+          onClose={() => setBudgetFlow(null)}
+          onSaved={() => { setBudgetFlow(null); fetchData(); }}
         />
       )}
     </div>
