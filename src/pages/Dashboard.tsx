@@ -166,29 +166,29 @@ const Dashboard = () => {
         </div>
       </nav>
 
-      <div className="max-w-[1100px] mx-auto px-8 py-10">
+      <div className="max-w-[1100px] mx-auto px-4 sm:px-8 py-6 sm:py-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="font-display text-3xl tracking-tight">Dashboard</h1>
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+          <h1 className="font-display text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <button
               onClick={() => navigate("/analytics")}
-              className="border border-border px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
+              className="border border-border px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
             >
               <BarChart3 size={15} />
-              Analytics
+              <span className="hidden sm:inline">Analytics</span>
             </button>
             <button
               onClick={() => navigate("/alerts")}
-              className="border border-border px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
+              className="border border-border px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
             >
               <Bell size={15} />
-              Alerts
+              <span className="hidden sm:inline">Alerts</span>
             </button>
             <BulkSimulateButton flowIds={flows.map((f) => f.id)} />
             <button
               onClick={() => setShowAddFlow(true)}
-              className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-medium tracking-tight hover:opacity-90 transition-opacity"
+              className="bg-primary text-primary-foreground px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg text-sm font-medium tracking-tight hover:opacity-90 transition-opacity"
             >
               Add flow
             </button>
@@ -196,7 +196,7 @@ const Dashboard = () => {
         </div>
 
         {/* Metric cards */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="border border-border rounded-xl px-5 py-4 bg-card">
             <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Active Flows</div>
             <div className="text-2xl font-display">{flows.filter(f => f.flow_enabled).length}</div>
