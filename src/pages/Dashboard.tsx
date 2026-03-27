@@ -154,12 +154,12 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
-      <nav className="sticky top-0 z-50 flex items-center justify-between px-8 py-4 border-b border-border bg-background/95 backdrop-blur-sm">
+      <nav className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-8 py-4 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="font-display text-[22px] tracking-tight">
           Flow<span className="text-primary">Ledger</span>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">{user?.email}</span>
+        <div className="flex items-center gap-2 sm:gap-4">
+          <span className="text-sm text-muted-foreground hidden sm:inline">{user?.email}</span>
           <button onClick={signOut} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Sign out
           </button>
