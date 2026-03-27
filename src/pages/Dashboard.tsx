@@ -154,41 +154,41 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
-      <nav className="sticky top-0 z-50 flex items-center justify-between px-8 py-4 border-b border-border bg-background/95 backdrop-blur-sm">
+      <nav className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-8 py-4 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="font-display text-[22px] tracking-tight">
           Flow<span className="text-primary">Ledger</span>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">{user?.email}</span>
+        <div className="flex items-center gap-2 sm:gap-4">
+          <span className="text-sm text-muted-foreground hidden sm:inline">{user?.email}</span>
           <button onClick={signOut} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Sign out
           </button>
         </div>
       </nav>
 
-      <div className="max-w-[1100px] mx-auto px-8 py-10">
+      <div className="max-w-[1100px] mx-auto px-4 sm:px-8 py-6 sm:py-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="font-display text-3xl tracking-tight">Dashboard</h1>
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+          <h1 className="font-display text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
             <button
               onClick={() => navigate("/analytics")}
-              className="border border-border px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
+              className="border border-border px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
             >
               <BarChart3 size={15} />
-              Analytics
+              <span className="hidden sm:inline">Analytics</span>
             </button>
             <button
               onClick={() => navigate("/alerts")}
-              className="border border-border px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
+              className="border border-border px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
             >
               <Bell size={15} />
-              Alerts
+              <span className="hidden sm:inline">Alerts</span>
             </button>
             <BulkSimulateButton flowIds={flows.map((f) => f.id)} />
             <button
               onClick={() => setShowAddFlow(true)}
-              className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-medium tracking-tight hover:opacity-90 transition-opacity"
+              className="bg-primary text-primary-foreground px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg text-sm font-medium tracking-tight hover:opacity-90 transition-opacity"
             >
               Add flow
             </button>
@@ -196,7 +196,7 @@ const Dashboard = () => {
         </div>
 
         {/* Metric cards */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <div className="border border-border rounded-xl px-5 py-4 bg-card">
             <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Active Flows</div>
             <div className="text-2xl font-display">{flows.filter(f => f.flow_enabled).length}</div>
@@ -211,106 +211,179 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Flows table */}
-        <div className="border border-border rounded-xl bg-card overflow-hidden mb-8">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium w-8"></th>
-                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Name</th>
-                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Platform</th>
-                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Status</th>
-                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Budget</th>
-                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Last Run</th>
-                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">Runs Today</th>
-                <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">Cost Today</th>
-                <th className="px-5 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {flows.map((flow) => {
-                const budgetPct = flow.budget_limit ? Math.min((flow.monthlySpend / flow.budget_limit) * 100, 100) : null;
-                const budgetColor = budgetPct !== null
-                  ? budgetPct >= 90 ? "bg-destructive" : budgetPct >= 70 ? "bg-[hsl(40,90%,50%)]" : "bg-accent"
-                  : "";
+        {/* Flows - mobile cards / desktop table */}
+        <div className="border border-border rounded-xl bg-card overflow-hidden mb-6 sm:mb-8">
+          {/* Desktop table */}
+          <div className="hidden md:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left">
+                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium w-8"></th>
+                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Name</th>
+                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Platform</th>
+                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Status</th>
+                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Budget</th>
+                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Last Run</th>
+                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">Runs Today</th>
+                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">Cost Today</th>
+                  <th className="px-5 py-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {flows.map((flow) => {
+                  const budgetPct = flow.budget_limit ? Math.min((flow.monthlySpend / flow.budget_limit) * 100, 100) : null;
+                  const budgetColor = budgetPct !== null
+                    ? budgetPct >= 90 ? "bg-destructive" : budgetPct >= 70 ? "bg-[hsl(40,90%,50%)]" : "bg-accent"
+                    : "";
 
-                return (
-                  <tr
-                    key={flow.id}
-                    onClick={() => navigate(`/flows/${flow.id}`)}
-                    className="border-b border-border last:border-0 cursor-pointer hover:bg-muted/30 transition-colors"
-                  >
-                    {/* Pause/Resume toggle */}
-                    <td className="pl-5 py-3.5">
+                  return (
+                    <tr
+                      key={flow.id}
+                      onClick={() => navigate(`/flows/${flow.id}`)}
+                      className="border-b border-border last:border-0 cursor-pointer hover:bg-muted/30 transition-colors"
+                    >
+                      <td className="pl-5 py-3.5">
+                        <button
+                          onClick={(e) => toggleFlowEnabled(flow.id, flow.flow_enabled, e)}
+                          title={flow.flow_enabled ? "Pause flow" : "Resume flow"}
+                          className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                        >
+                          {flow.flow_enabled ? <Pause size={14} /> : <Play size={14} />}
+                        </button>
+                      </td>
+                      <td className="px-5 py-3.5 font-medium text-foreground">{flow.name}</td>
+                      <td className="px-5 py-3.5 text-muted-foreground">{flow.platform}</td>
+                      <td className="px-5 py-3.5">
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusStyles[flow.status]}`}>
+                          {flow.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        {flow.budget_limit !== null ? (
+                          <div className="flex flex-col gap-1 min-w-[100px]">
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>${flow.monthlySpend.toFixed(2)}</span>
+                              <span>${flow.budget_limit.toFixed(2)}</span>
+                            </div>
+                            <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${budgetColor}`}
+                                style={{ width: `${budgetPct}%` }}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setBudgetFlow(flow); }}
+                            className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                          >
+                            <DollarSign size={12} />
+                            Set budget
+                          </button>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5 text-muted-foreground">
+                        {flow.lastRun
+                          ? formatDistanceToNow(new Date(flow.lastRun), { addSuffix: true })
+                          : "Never"}
+                      </td>
+                      <td className="px-5 py-3.5 text-right text-muted-foreground">{flow.runsToday}</td>
+                      <td className="px-5 py-3.5 text-right text-muted-foreground">${flow.costToday.toFixed(2)}</td>
+                      <td className="px-5 py-3.5 text-right flex items-center justify-end gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setBudgetFlow(flow); }}
+                          title="Set budget"
+                          className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                        >
+                          <DollarSign size={14} />
+                        </button>
+                        <SimulateRunButton flowId={flow.id} />
+                      </td>
+                    </tr>
+                  );
+                })}
+                {flows.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="px-5 py-8 text-center text-muted-foreground">
+                      No flows yet. Click "Add flow" to get started.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card list */}
+          <div className="md:hidden divide-y divide-border">
+            {flows.map((flow) => {
+              const budgetPct = flow.budget_limit ? Math.min((flow.monthlySpend / flow.budget_limit) * 100, 100) : null;
+              const budgetColor = budgetPct !== null
+                ? budgetPct >= 90 ? "bg-destructive" : budgetPct >= 70 ? "bg-[hsl(40,90%,50%)]" : "bg-accent"
+                : "";
+
+              return (
+                <div
+                  key={flow.id}
+                  onClick={() => navigate(`/flows/${flow.id}`)}
+                  className="p-4 cursor-pointer active:bg-muted/30 transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={(e) => toggleFlowEnabled(flow.id, flow.flow_enabled, e)}
-                        title={flow.flow_enabled ? "Pause flow" : "Resume flow"}
-                        className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                        className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground"
                       >
                         {flow.flow_enabled ? <Pause size={14} /> : <Play size={14} />}
                       </button>
-                    </td>
-                    <td className="px-5 py-3.5 font-medium text-foreground">{flow.name}</td>
-                    <td className="px-5 py-3.5 text-muted-foreground">{flow.platform}</td>
-                    <td className="px-5 py-3.5">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusStyles[flow.status]}`}>
-                        {flow.status}
-                      </span>
-                    </td>
-                    {/* Budget column */}
-                    <td className="px-5 py-3.5">
-                      {flow.budget_limit !== null ? (
-                        <div className="flex flex-col gap-1 min-w-[100px]">
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>${flow.monthlySpend.toFixed(2)}</span>
-                            <span>${flow.budget_limit.toFixed(2)}</span>
-                          </div>
-                          <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${budgetColor}`}
-                              style={{ width: `${budgetPct}%` }}
-                            />
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setBudgetFlow(flow); }}
-                          className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
-                        >
-                          <DollarSign size={12} />
-                          Set budget
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5 text-muted-foreground">
-                      {flow.lastRun
-                        ? formatDistanceToNow(new Date(flow.lastRun), { addSuffix: true })
-                        : "Never"}
-                    </td>
-                    <td className="px-5 py-3.5 text-right text-muted-foreground">{flow.runsToday}</td>
-                    <td className="px-5 py-3.5 text-right text-muted-foreground">${flow.costToday.toFixed(2)}</td>
-                    <td className="px-5 py-3.5 text-right flex items-center justify-end gap-2">
+                      <span className="font-medium text-foreground text-sm">{flow.name}</span>
+                    </div>
+                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusStyles[flow.status]}`}>
+                      {flow.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+                    <span>{flow.platform}</span>
+                    <span>·</span>
+                    <span>{flow.lastRun ? formatDistanceToNow(new Date(flow.lastRun), { addSuffix: true }) : "Never"}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-4">
+                      <span className="text-muted-foreground">{flow.runsToday} runs</span>
+                      <span className="text-foreground font-medium">${flow.costToday.toFixed(2)} today</span>
+                    </div>
+                    <div className="flex items-center gap-1">
                       <button
                         onClick={(e) => { e.stopPropagation(); setBudgetFlow(flow); }}
-                        title="Set budget"
-                        className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                        className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground"
                       >
                         <DollarSign size={14} />
                       </button>
                       <SimulateRunButton flowId={flow.id} />
-                    </td>
-                  </tr>
-                );
-              })}
-              {flows.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="px-5 py-8 text-center text-muted-foreground">
-                    No flows yet. Click "Add flow" to get started.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    </div>
+                  </div>
+                  {flow.budget_limit !== null && (
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                        <span>${flow.monthlySpend.toFixed(2)}</span>
+                        <span>${flow.budget_limit.toFixed(2)}</span>
+                      </div>
+                      <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${budgetColor}`}
+                          style={{ width: `${budgetPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {flows.length === 0 && (
+              <div className="p-6 text-center text-muted-foreground text-sm">
+                No flows yet. Click "Add flow" to get started.
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Spend chart */}
