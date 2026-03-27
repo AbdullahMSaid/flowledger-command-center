@@ -18,7 +18,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Extract flowId from URL path
     const url = new URL(req.url);
     const pathParts = url.pathname.split("/");
     const flowId = pathParts[pathParts.length - 1];
@@ -30,7 +29,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check for Authorization header (accept any bearer token for MVP)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
@@ -42,7 +40,6 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { status, duration_ms, token_count, cost_usd, error_message } = body;
 
-    // Validate required fields
     if (!status || !["success", "error"].includes(status)) {
       return new Response(JSON.stringify({ error: "Invalid status. Must be 'success' or 'error'" }), {
         status: 400,
@@ -57,16 +54,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Use service_role key to bypass RLS
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Verify the flow exists
+    // Fetch the flow with enabled and budget info
     const { data: flow, error: flowError } = await supabase
       .from("flows")
-      .select("id")
+      .select("id, flow_enabled, budget_limit")
       .eq("id", flowId)
       .single();
 
@@ -75,6 +71,42 @@ Deno.serve(async (req) => {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Check if flow is paused
+    if (!flow.flow_enabled) {
+      return new Response(JSON.stringify({ ok: false, reason: "paused" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check budget limit
+    if (flow.budget_limit !== null) {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+
+      const { data: monthRuns } = await supabase
+        .from("runs")
+        .select("cost_usd")
+        .eq("flow_id", flowId)
+        .gte("created_at", monthStart.toISOString());
+
+      const monthlySpend = (monthRuns || []).reduce((sum: number, r: { cost_usd: number }) => sum + Number(r.cost_usd), 0);
+
+      if (monthlySpend + cost_usd > flow.budget_limit) {
+        // Auto-pause the flow
+        await supabase
+          .from("flows")
+          .update({ flow_enabled: false })
+          .eq("id", flowId);
+
+        return new Response(JSON.stringify({ ok: false, reason: "budget_exceeded" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Insert the run

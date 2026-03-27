@@ -1,0 +1,1 @@
+ALTER TABLE public.flows ADD COLUMN budget_limit numeric DEFAULT NULL, ADD COLUMN flow_enabled boolean NOT NULL DEFAULT true;

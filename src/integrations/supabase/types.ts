@@ -16,7 +16,9 @@ export type Database = {
     Tables: {
       flows: {
         Row: {
+          budget_limit: number | null
           created_at: string
+          flow_enabled: boolean
           id: string
           model: string
           name: string
@@ -24,7 +26,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          budget_limit?: number | null
           created_at?: string
+          flow_enabled?: boolean
           id?: string
           model: string
           name: string
@@ -32,7 +36,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          budget_limit?: number | null
           created_at?: string
+          flow_enabled?: boolean
           id?: string
           model?: string
           name?: string
