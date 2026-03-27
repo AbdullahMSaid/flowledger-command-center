@@ -11,8 +11,8 @@ const steps = [
   },
   {
     num: "03",
-    title: "Govern and optimize",
-    desc: "Set spend limits, get alerted on failures, enforce compliance policies, and optimize token usage across every workflow.",
+    title: "Set limits. We enforce them.",
+    desc: "Define budget caps per flow or per workspace. When a workflow hits its limit, FlowLedger pauses it automatically — no overspend, no surprises.",
   },
 ];
 
