@@ -87,7 +87,8 @@ const Pricing = () => {
                 </span>
               )}
             </div>
-            <div className="text-[13px] text-ink3 mb-6">{t.period}</div>
+            <div className="text-[13px] text-ink3 mb-3">{t.period}</div>
+            <div className="text-[13px] text-primary font-medium mb-6">{t.highlight}</div>
             <ul className="flex flex-col gap-2.5 mb-7 flex-1">
               {t.features.map((f) => (
                 <li key={f} className="text-sm text-ink2 pl-5 relative">
