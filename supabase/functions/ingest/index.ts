@@ -59,10 +59,10 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch the flow with enabled and budget info
+    // Fetch the flow with enabled, budget, and owner info
     const { data: flow, error: flowError } = await supabase
       .from("flows")
-      .select("id, flow_enabled, budget_limit")
+      .select("id, flow_enabled, budget_limit, user_id, name")
       .eq("id", flowId)
       .single();
 
@@ -101,6 +101,30 @@ Deno.serve(async (req) => {
           .from("flows")
           .update({ flow_enabled: false })
           .eq("id", flowId);
+
+        // Find matching budget_exceeded alert rules for this flow
+        const { data: matchingRules } = await supabase
+          .from("alert_rules")
+          .select("id, name")
+          .eq("user_id", flow.user_id)
+          .eq("condition_type", "budget_exceeded")
+          .eq("enabled", true);
+
+        if (matchingRules && matchingRules.length > 0) {
+          const alertInserts = matchingRules
+            .filter((rule: { id: string; name: string }) => true) // all budget_exceeded rules apply
+            .map((rule: { id: string; name: string }) => ({
+              user_id: flow.user_id,
+              rule_id: rule.id,
+              rule_name: rule.name,
+              condition_type: "budget_exceeded",
+              flow_id: flowId,
+              flow_name: flow.name,
+              status: "triggered",
+            }));
+
+          await supabase.from("alert_history").insert(alertInserts);
+        }
 
         return new Response(JSON.stringify({ ok: false, reason: "budget_exceeded" }), {
           status: 200,

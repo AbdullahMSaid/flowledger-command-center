@@ -14,6 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
+      alert_history: {
+        Row: {
+          condition_type: string
+          created_at: string
+          flow_id: string | null
+          flow_name: string | null
+          id: string
+          rule_id: string | null
+          rule_name: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          condition_type: string
+          created_at?: string
+          flow_id?: string | null
+          flow_name?: string | null
+          id?: string
+          rule_id?: string | null
+          rule_name: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          condition_type?: string
+          created_at?: string
+          flow_id?: string | null
+          flow_name?: string | null
+          id?: string
+          rule_id?: string | null
+          rule_name?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_history_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alert_history_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "alert_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      alert_rules: {
+        Row: {
+          condition_type: string
+          created_at: string
+          enabled: boolean
+          flow_id: string | null
+          id: string
+          name: string
+          notify_email: boolean
+          scope: string
+          slack_webhook_url: string | null
+          threshold: number
+          user_id: string
+        }
+        Insert: {
+          condition_type: string
+          created_at?: string
+          enabled?: boolean
+          flow_id?: string | null
+          id?: string
+          name: string
+          notify_email?: boolean
+          scope?: string
+          slack_webhook_url?: string | null
+          threshold: number
+          user_id: string
+        }
+        Update: {
+          condition_type?: string
+          created_at?: string
+          enabled?: boolean
+          flow_id?: string | null
+          id?: string
+          name?: string
+          notify_email?: boolean
+          scope?: string
+          slack_webhook_url?: string | null
+          threshold?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_rules_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flows: {
         Row: {
           budget_limit: number | null
