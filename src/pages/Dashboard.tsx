@@ -172,6 +172,13 @@ const Dashboard = () => {
           <h1 className="font-display text-3xl tracking-tight">Dashboard</h1>
           <div className="flex items-center gap-3">
             <button
+              onClick={() => navigate("/analytics")}
+              className="border border-border px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
+            >
+              <BarChart3 size={15} />
+              Analytics
+            </button>
+            <button
               onClick={() => navigate("/alerts")}
               className="border border-border px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
             >
