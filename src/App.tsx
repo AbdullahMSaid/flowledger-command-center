@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard.tsx";
 import FlowDetail from "./pages/FlowDetail.tsx";
 import Alerts from "./pages/Alerts.tsx";
 import Analytics from "./pages/Analytics.tsx";
+import Docs from "./pages/Docs.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
