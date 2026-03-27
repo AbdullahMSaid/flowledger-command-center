@@ -102,6 +102,30 @@ Deno.serve(async (req) => {
           .update({ flow_enabled: false })
           .eq("id", flowId);
 
+        // Find matching budget_exceeded alert rules for this flow
+        const { data: matchingRules } = await supabase
+          .from("alert_rules")
+          .select("id, name")
+          .eq("user_id", flow.user_id)
+          .eq("condition_type", "budget_exceeded")
+          .eq("enabled", true);
+
+        if (matchingRules && matchingRules.length > 0) {
+          const alertInserts = matchingRules
+            .filter((rule: { id: string; name: string }) => true) // all budget_exceeded rules apply
+            .map((rule: { id: string; name: string }) => ({
+              user_id: flow.user_id,
+              rule_id: rule.id,
+              rule_name: rule.name,
+              condition_type: "budget_exceeded",
+              flow_id: flowId,
+              flow_name: flow.name,
+              status: "triggered",
+            }));
+
+          await supabase.from("alert_history").insert(alertInserts);
+        }
+
         return new Response(JSON.stringify({ ok: false, reason: "budget_exceeded" }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
