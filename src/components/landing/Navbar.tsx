@@ -1,7 +1,7 @@
 const navLinks = [
-  { label: "Product", href: "#product" },
-  { label: "Integrations", href: "#integrations" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "Product", href: "/#product" },
+  { label: "Integrations", href: "/#integrations" },
+  { label: "Pricing", href: "/#pricing" },
   { label: "Docs", href: "/docs" },
   { label: "Investors", href: "/investors" },
 ];
