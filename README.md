@@ -4,7 +4,7 @@
 > Track, govern, and control every AI workflow across your organisation — in real time.
 
 [![Built with Supabase](https://img.shields.io/badge/Built%20with-Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)](https://supabase.com)
-[![Deployed on Netlify](https://img.shields.io/badge/Deployed%20on-Vercel-000000?style=flat&logo=vercel&logoColor=white)](https://vercel.com)
+[![Deployed on Netlify](https://img.shields.io/badge/Deployed%20on-Netlify-00C7B7?style=flat&logo=netlify&logoColor=white)](https://netlify.com)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=white)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -117,7 +117,7 @@ No SDK. No proxy layer. No agents. Just a webhook.
 | Rate limiting | Upstash Redis | Fast key-value store for per-workspace rate limiting |
 | Email | Resend | Transactional email for alerts and auth |
 | Payments | Stripe (planned) | Subscription billing with webhooks |
-| Deployment | Vercel | Git-based deploys, preview environments, global CDN |
+| Deployment | Netlify | Git-based deploys, preview environments, global CDN |
 | Fonts | DM Serif Display + DM Sans | Editorial-modern design system |
 
 ---
@@ -126,7 +126,7 @@ No SDK. No proxy layer. No agents. Just a webhook.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Client (Vercel)                       │
+│                   Client (Netlify)                       │
 │         React + Tailwind + Recharts + Supabase JS        │
 └────────────────────────┬────────────────────────────────┘
                          │
@@ -320,10 +320,9 @@ cd flowledger
 npm install
 
 # Copy environment variables
-cp .env.example .env.local
+cp .env.example .env
 
-# Fill in your Supabase credentials in .env.local
-# (see Environment variables section below)
+# Fill in your Supabase credentials in .env
 
 # Run the development server
 npm run dev
@@ -345,24 +344,29 @@ supabase db push
 supabase functions deploy ingest
 ```
 
-### Deploy to Vercel
+### Deploy to Netlify
 
 ```bash
-# Install Vercel CLI
-npm install -g vercel
+# Install Netlify CLI
+npm install -g netlify-cli
+
+# Build the project
+npm run build
 
 # Deploy
-vercel --prod
+netlify deploy --prod --dir=dist
 ```
 
-Or connect the GitHub repo to Vercel for automatic deployments on every push.
+Or connect the GitHub repo to Netlify for automatic deployments on every push — go to app.netlify.com, click "Add new site", and select your repository. Set the build command to `npm run build` and the publish directory to `dist`.
+
+> **Note:** Supabase Edge Functions are hosted on Supabase's infrastructure, not Netlify. You do not need Netlify Functions for the ingest endpoint — it runs independently on Supabase's global edge network.
 
 ---
 
 ## Environment variables
 
 ```bash
-# .env.local
+# .env (Netlify reads this locally; set production values in Netlify dashboard → Site settings → Environment variables)
 
 # Supabase
 VITE_SUPABASE_URL=https://your-project.supabase.co
@@ -521,7 +525,7 @@ MIT — see [LICENSE](LICENSE) for details.
 ## Built with
 
 - [Supabase](https://supabase.com) — database, auth, real-time, and edge functions
-- [Vercel](https://vercel.com) — deployment and CDN
+- [Netlify](https://netlify.com) — deployment and CDN
 - [Recharts](https://recharts.org) — charting
 - [Resend](https://resend.com) — transactional email
 - [Upstash](https://upstash.com) — serverless Redis for rate limiting
@@ -530,5 +534,8 @@ MIT — see [LICENSE](LICENSE) for details.
 
 ---
 
-FlowLedger · The AI Ops layer every enterprise will need.
-[flowledger.com](https://flowledger.com) · [hello@flowledger.com](mailto:hello@flowledger.com)
+<p align="center">
+  <strong>FlowLedger</strong> · The AI Ops layer every enterprise will need.<br>
+  <a href="https://flowledger.com">flowledger.com</a> · 
+  <a href="mailto:hello@flowledger.com">hello@flowledger.com</a>
+</p>
