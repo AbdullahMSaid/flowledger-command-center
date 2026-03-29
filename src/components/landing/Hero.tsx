@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useState } from "react";
 
 const flows = [
@@ -28,13 +29,13 @@ const Hero = () => {
             Set budget limits, pause runaway workflows, and see exactly where every dollar goes — in real time.
           </p>
           <div className="flex items-center gap-3 flex-wrap">
-            <a href="/signup" className="bg-primary text-primary-foreground px-7 py-3.5 rounded-lg text-[15px] font-medium tracking-tight hover:translate-y-[-1px] hover:shadow-[0_8px_24px_rgba(26,75,255,0.3)] transition-all">
+            <Link to="/signup" className="bg-primary text-primary-foreground px-7 py-3.5 rounded-lg text-[15px] font-medium tracking-tight hover:translate-y-[-1px] hover:shadow-[0_8px_24px_rgba(26,75,255,0.3)] transition-all">
               Get early access
-            </a>
-            <a href="/docs" className="border border-border bg-card text-foreground px-7 py-3.5 rounded-lg text-[15px] hover:border-ink3 transition-colors inline-flex items-center gap-2">
+            </Link>
+            <Link to="/docs" className="border border-border bg-card text-foreground px-7 py-3.5 rounded-lg text-[15px] hover:border-ink3 transition-colors inline-flex items-center gap-2">
               View docs
               <span className="text-[10px] uppercase tracking-wider text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">Coming soon</span>
-            </a>
+            </Link>
           </div>
         </div>
 
