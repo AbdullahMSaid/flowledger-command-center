@@ -81,7 +81,7 @@ const techLayers = [
     borderColor: "border-ink3/20",
     accentColor: "text-ink3",
     tools: [
-      { name: "Vercel", desc: "Edge deployment" },
+      { name: "Netlify", desc: "Edge deployment" },
       { name: "GitHub", desc: "CI/CD & version control" },
       { name: "Lovable", desc: "AI-assisted development" },
       { name: "PostgREST", desc: "Auto-generated API" },
