@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 const EmailCapture = () => {
   const [email, setEmail] = useState("");
@@ -23,12 +24,12 @@ const EmailCapture = () => {
             placeholder="Work email address"
             className="border border-border rounded-lg px-[18px] py-3.5 text-[15px] font-body text-foreground bg-card w-[280px] focus:outline-none focus:border-primary"
           />
-          <a
-            href="/signup"
+          <Link
+            to="/signup"
             className="bg-primary text-primary-foreground px-7 py-3.5 rounded-lg text-[15px] font-medium tracking-tight hover:translate-y-[-1px] hover:shadow-[0_8px_24px_rgba(26,75,255,0.3)] transition-all"
           >
             Request early access →
-          </a>
+          </Link>
         </form>
       </div>
     </section>
