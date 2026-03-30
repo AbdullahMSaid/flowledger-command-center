@@ -29,7 +29,7 @@ No SDK. No proxy layer. No agents. Just a webhook.
 
 ## Live demo
 
-> Sign up at [flowledger.com](https://flowledger.com) and use the **Simulate 10 Runs** button on the dashboard to see the full real-time loop — status updates, spend tracking, and budget enforcement — without connecting a real workflow.
+> Sign up at [flowledgerai.com](https://flowledgerai.com) and use the **Simulate 10 Runs** button on the dashboard to see the full real-time loop — status updates, spend tracking, and budget enforcement — without connecting a real workflow.
 
 ---
 
@@ -505,7 +505,7 @@ Rather than relying on users to add a webhook step, FlowLedger will connect dire
 
 ## Contributing
 
-FlowLedger is currently in closed beta. If you're interested in contributing or integrating FlowLedger into your own tooling, reach out at hello@flowledger.com.
+FlowLedger is currently in closed beta. If you're interested in contributing or integrating FlowLedger into your own tooling, reach out at hello@flowledgerai.com.
 
 When the project opens for contributions a full contributing guide will be added here covering:
 - Local development setup
@@ -536,6 +536,6 @@ MIT — see [LICENSE](LICENSE) for details.
 
 <p align="center">
   <strong>FlowLedger</strong> · The AI Ops layer every enterprise will need.<br>
-  <a href="https://flowledger.com">flowledger.com</a> · 
-  <a href="mailto:hello@flowledger.com">hello@flowledger.com</a>
+  <a href="https://flowledgerai.com">flowledgerai.com</a> · 
+  <a href="mailto:hello@flowledgerai.com">hello@flowledgerai.com</a>
 </p>
