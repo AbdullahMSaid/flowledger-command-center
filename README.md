@@ -505,7 +505,7 @@ Rather than relying on users to add a webhook step, FlowLedger will connect dire
 
 ## Contributing
 
-FlowLedger is currently in closed beta. If you're interested in contributing or integrating FlowLedger into your own tooling, reach out at hello@flowledgerai.com.
+FlowLedger is currently in closed beta. If you're interested in contributing or integrating FlowLedger into your own tooling, reach out at abdullahi_said1@outlook.com.
 
 When the project opens for contributions a full contributing guide will be added here covering:
 - Local development setup
@@ -537,5 +537,5 @@ MIT — see [LICENSE](LICENSE) for details.
 <p align="center">
   <strong>FlowLedger</strong> · The AI Ops layer every enterprise will need.<br>
   <a href="https://flowledgerai.com">flowledgerai.com</a> · 
-  <a href="mailto:hello@flowledgerai.com">hello@flowledgerai.com</a>
+  <a href="mailto:abdullahi_said1@outlook.com">abdullahi_said1@outlook.com</a>
 </p>
