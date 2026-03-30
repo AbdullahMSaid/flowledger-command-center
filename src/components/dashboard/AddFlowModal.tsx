@@ -1,6 +1,37 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+const errorMessages = [
+  "Timeout after 30s",
+  "Rate limit exceeded",
+  "Context length exceeded",
+];
+
+async function seedRuns(flowId: string) {
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ingest/${flowId}`;
+  const headers = {
+    Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+    "Content-Type": "application/json",
+  };
+  const promises = Array.from({ length: 3 }, () => {
+    const isError = Math.random() < 0.2;
+    return fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        status: isError ? "error" : "success",
+        cost_usd: Number((Math.random() * 0.078 + 0.002).toFixed(4)),
+        duration_ms: Math.floor(Math.random() * 4400 + 600),
+        token_count: Math.floor(Math.random() * 3800 + 200),
+        error_message: isError
+          ? errorMessages[Math.floor(Math.random() * errorMessages.length)]
+          : null,
+      }),
+    }).catch(() => null);
+  });
+  await Promise.all(promises);
+}
+
 const platforms = ["Zapier", "n8n", "Make", "LangChain", "Other"];
 
 const AddFlowModal = ({
@@ -31,17 +62,17 @@ const AddFlowModal = ({
       return;
     }
 
-    const { error: insertError } = await supabase.from("flows").insert({
-      name,
-      platform,
-      model,
-      user_id: user.id,
-    });
+    const { data: newFlow, error: insertError } = await supabase
+      .from("flows")
+      .insert({ name, platform, model, user_id: user.id })
+      .select("id")
+      .single();
 
-    if (insertError) {
-      setError(insertError.message);
+    if (insertError || !newFlow) {
+      setError(insertError?.message ?? "Failed to create flow");
       setLoading(false);
     } else {
+      await seedRuns(newFlow.id);
       onCreated();
     }
   };

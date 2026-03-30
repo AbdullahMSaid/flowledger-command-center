@@ -129,7 +129,7 @@ const Docs = () => {
                 <div className="text-[15px] font-medium text-foreground font-body mb-1">Copy your webhook URL</div>
                 <P>From the flow detail page, copy the ingest URL. It looks like:</P>
                 <code className="text-[13px] text-primary bg-primary/5 px-2.5 py-1 rounded-md font-mono break-all">
-                  POST https://isxicvnbiofcsftaeeam.supabase.co/functions/v1/ingest/:flowId
+                  POST https://your-project.supabase.co/functions/v1/ingest/:flowId
                 </code>
               </div>
             </div>

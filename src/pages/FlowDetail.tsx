@@ -47,6 +47,8 @@ const FlowDetail = () => {
   const [successRate, setSuccessRate] = useState(0);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const webhookUrl = `${supabaseUrl}/functions/v1/ingest/${id}`;
@@ -126,6 +128,14 @@ const FlowDetail = () => {
     };
   }, [id, user, fetchData]);
 
+  const resetRuns = async () => {
+    setResetting(true);
+    await supabase.from("runs").delete().eq("flow_id", id);
+    setConfirmReset(false);
+    setResetting(false);
+    fetchData();
+  };
+
   const copyWebhook = () => {
     navigator.clipboard.writeText(webhookUrl);
     setCopied(true);
@@ -204,6 +214,34 @@ const FlowDetail = () => {
 
         {/* Runs table */}
         <div className="border border-border rounded-xl bg-card overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+            <span className="text-xs text-ink3 uppercase tracking-wider font-medium">Recent runs</span>
+            {confirmReset ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Delete all runs?</span>
+                <button
+                  onClick={() => setConfirmReset(false)}
+                  className="text-xs px-2.5 py-1 border border-border rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={resetRuns}
+                  disabled={resetting}
+                  className="text-xs px-2.5 py-1 bg-destructive text-destructive-foreground rounded-md hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {resetting ? "Deleting…" : "Confirm"}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmReset(true)}
+                className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+              >
+                Reset runs
+              </button>
+            )}
+          </div>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-left">

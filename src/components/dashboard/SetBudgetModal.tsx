@@ -14,6 +14,13 @@ const SetBudgetModal = ({ flowId, flowName, currentBudget, onClose, onSaved }: S
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const removeBudget = async () => {
+    setLoading(true);
+    const { error: updateError } = await supabase.from("flows").update({ budget_limit: null }).eq("id", flowId);
+    if (updateError) { setError(updateError.message); setLoading(false); }
+    else onSaved();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -71,6 +78,16 @@ const SetBudgetModal = ({ flowId, flowName, currentBudget, onClose, onSaved }: S
             >
               Cancel
             </button>
+            {currentBudget !== null && (
+              <button
+                type="button"
+                onClick={removeBudget}
+                disabled={loading}
+                className="flex-1 border border-destructive/40 text-destructive py-2.5 rounded-lg text-sm font-medium hover:bg-destructive/5 transition-colors disabled:opacity-50"
+              >
+                Remove
+              </button>
+            )}
             <button
               type="submit"
               disabled={loading}

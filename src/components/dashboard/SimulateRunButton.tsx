@@ -7,7 +7,7 @@ const errorMessages = [
   "Context length exceeded",
 ];
 
-const SimulateRunButton = ({ flowId }: { flowId: string }) => {
+const SimulateRunButton = ({ flowId, onSuccess }: { flowId: string; onSuccess?: () => void }) => {
   const [state, setState] = useState<"idle" | "sending" | "failed">("idle");
 
   const simulate = async () => {
@@ -29,7 +29,7 @@ const SimulateRunButton = ({ flowId }: { flowId: string }) => {
       const res = await fetch(url, {
         method: "POST",
         headers: {
-          Authorization: "Bearer demo-token",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
@@ -37,6 +37,7 @@ const SimulateRunButton = ({ flowId }: { flowId: string }) => {
 
       if (!res.ok) throw new Error("Failed");
       setState("idle");
+      onSuccess?.();
     } catch {
       setState("failed");
       setTimeout(() => setState("idle"), 3000);

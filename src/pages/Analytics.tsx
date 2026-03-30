@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type DaySpend = { day: string; cost: number };
-type FlowSpend = { id: string; name: string; platform: string; totalCost: number };
+type FlowSpend = { id: string; name: string; platform: string; totalCost: number; runCount: number };
 
 const rangeOptions = [
   { label: "7 days", value: "7" },
@@ -89,17 +89,19 @@ const Analytics = () => {
       .gte("created_at", monthStart.toISOString());
 
     const flowCostMap: Record<string, number> = {};
+    const flowRunCount: Record<string, number> = {};
     let monthTokens = 0;
 
     (monthRuns || []).forEach((r) => {
       flowCostMap[r.flow_id] = (flowCostMap[r.flow_id] || 0) + Number(r.cost_usd);
+      flowRunCount[r.flow_id] = (flowRunCount[r.flow_id] || 0) + 1;
       monthTokens += Number(r.token_count);
     });
 
     const sortedFlows: FlowSpend[] = Object.entries(flowCostMap)
       .map(([id, totalCost]) => {
         const flow = flowMap.get(id);
-        return { id, name: flow?.name || "Unknown", platform: flow?.platform || "", totalCost };
+        return { id, name: flow?.name || "Unknown", platform: flow?.platform || "", totalCost, runCount: flowRunCount[id] || 0 };
       })
       .sort((a, b) => b.totalCost - a.totalCost);
 
@@ -245,17 +247,21 @@ const Analytics = () => {
                 <tr className="border-b border-border text-left">
                   <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Flow</th>
                   <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Platform</th>
+                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">Runs</th>
+                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">Avg/Run</th>
                   <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">Total Cost</th>
                 </tr>
               </thead>
               <tbody>
                 {flowSpends.length === 0 ? (
-                  <tr><td colSpan={3} className="px-5 py-8 text-center text-muted-foreground">No spend data yet.</td></tr>
+                  <tr><td colSpan={5} className="px-5 py-8 text-center text-muted-foreground">No spend data yet.</td></tr>
                 ) : (
                   flowSpends.map((f) => (
                     <tr key={f.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/flows/${f.id}`)}>
                       <td className="px-5 py-3.5 font-medium text-foreground">{f.name}</td>
                       <td className="px-5 py-3.5 text-muted-foreground">{f.platform}</td>
+                      <td className="px-5 py-3.5 text-right text-muted-foreground">{f.runCount}</td>
+                      <td className="px-5 py-3.5 text-right text-muted-foreground">${f.runCount > 0 ? (f.totalCost / f.runCount).toFixed(4) : "—"}</td>
                       <td className="px-5 py-3.5 text-right text-foreground">${f.totalCost.toFixed(4)}</td>
                     </tr>
                   ))

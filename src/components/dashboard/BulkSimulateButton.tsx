@@ -7,7 +7,7 @@ const errorMessages = [
   "Context length exceeded",
 ];
 
-const BulkSimulateButton = ({ flowIds }: { flowIds: string[] }) => {
+const BulkSimulateButton = ({ flowIds, onSuccess }: { flowIds: string[]; onSuccess?: () => void }) => {
   const [state, setState] = useState<"idle" | "running">("idle");
   const [progress, setProgress] = useState(0);
 
@@ -35,7 +35,7 @@ const BulkSimulateButton = ({ flowIds }: { flowIds: string[] }) => {
           {
             method: "POST",
             headers: {
-              Authorization: "Bearer demo-token",
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify(payload),
@@ -51,6 +51,7 @@ const BulkSimulateButton = ({ flowIds }: { flowIds: string[] }) => {
 
     setState("idle");
     setProgress(0);
+    onSuccess?.();
   };
 
   return (

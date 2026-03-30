@@ -185,7 +185,7 @@ const Dashboard = () => {
               <Bell size={15} />
               <span className="hidden sm:inline">Alerts</span>
             </button>
-            <BulkSimulateButton flowIds={flows.map((f) => f.id)} />
+            <BulkSimulateButton flowIds={flows.filter((f) => f.flow_enabled).map((f) => f.id)} onSuccess={fetchData} />
             <button
               onClick={() => setShowAddFlow(true)}
               className="bg-primary text-primary-foreground px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg text-sm font-medium tracking-tight hover:opacity-90 transition-opacity"
@@ -297,7 +297,7 @@ const Dashboard = () => {
                         >
                           <DollarSign size={14} />
                         </button>
-                        <SimulateRunButton flowId={flow.id} />
+                        <SimulateRunButton flowId={flow.id} onSuccess={fetchData} />
                       </td>
                     </tr>
                   );
@@ -358,7 +358,7 @@ const Dashboard = () => {
                       >
                         <DollarSign size={14} />
                       </button>
-                      <SimulateRunButton flowId={flow.id} />
+                      <SimulateRunButton flowId={flow.id} onSuccess={fetchData} />
                     </div>
                   </div>
                   {flow.budget_limit !== null && (
