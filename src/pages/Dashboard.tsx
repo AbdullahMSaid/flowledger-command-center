@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import AddFlowModal from "@/components/dashboard/AddFlowModal";
@@ -155,10 +155,11 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       {/* Nav */}
       <nav className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-8 py-4 border-b border-border bg-background/95 backdrop-blur-sm">
-        <div className="font-display text-[22px] tracking-tight">
+        <Link to="/" className="font-display text-[22px] tracking-tight">
           Flow<span className="text-primary">Ledger</span>
-        </div>
+        </Link>
         <div className="flex items-center gap-2 sm:gap-4">
+          <Link to="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Docs</Link>
           <span className="text-sm text-muted-foreground hidden sm:inline">{user?.email}</span>
           <button onClick={signOut} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Sign out
