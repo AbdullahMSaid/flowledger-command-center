@@ -33,7 +33,7 @@ const Hero = () => {
               Get early access
             </Link>
             <Link to="/docs" className="border border-border bg-card text-foreground px-7 py-3.5 rounded-lg text-[15px] hover:border-ink3 transition-colors inline-flex items-center gap-2">
-              View docs
+              View Demo
               <span className="text-[10px] uppercase tracking-wider text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">Coming soon</span>
             </Link>
           </div>
