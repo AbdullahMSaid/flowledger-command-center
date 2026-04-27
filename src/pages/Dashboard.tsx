@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -59,16 +59,16 @@ const Dashboard = () => {
   const [renameFlow, setRenameFlow] = useState<FlowWithStats | null>(null);
   const [deleteFlow, setDeleteFlow] = useState<FlowWithStats | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
+  const fetchDataRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   const fetchData = useCallback(async () => {
     if (!user) return;
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
 
     const { data: flowsData } = await supabase
       .from("flows")
@@ -76,63 +76,54 @@ const Dashboard = () => {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (!flowsData) return;
+    if (!flowsData || flowsData.length === 0) {
+      setFlows([]);
+      setRunsToday(0);
+      setSpendToday(0);
+      setLoading(false);
+      return;
+    }
 
-    const enriched: FlowWithStats[] = await Promise.all(
-      flowsData.map(async (flow) => {
-        const { data: last10 } = await supabase
-          .from("runs")
-          .select("status, created_at")
-          .eq("flow_id", flow.id)
-          .order("created_at", { ascending: false })
-          .limit(10);
+    const flowIds = flowsData.map((f) => f.id);
 
-        const { data: todayRuns } = await supabase
-          .from("runs")
-          .select("cost_usd, created_at")
-          .eq("flow_id", flow.id)
-          .gte("created_at", todayStart.toISOString());
+    const [enriched, { data: allTodayRuns }] = await Promise.all([
+      Promise.all(
+        flowsData.map(async (flow) => {
+          const [{ data: last10 }, { data: todayRuns }, { data: monthRuns }] = await Promise.all([
+            supabase.from("runs").select("status, created_at").eq("flow_id", flow.id).order("created_at", { ascending: false }).limit(10),
+            supabase.from("runs").select("cost_usd, created_at").eq("flow_id", flow.id).gte("created_at", todayStart.toISOString()),
+            supabase.from("runs").select("cost_usd").eq("flow_id", flow.id).gte("created_at", monthStart.toISOString()),
+          ]);
 
-        const { data: monthRuns } = await supabase
-          .from("runs")
-          .select("cost_usd")
-          .eq("flow_id", flow.id)
-          .gte("created_at", monthStart.toISOString());
+          const status = computeStatus(last10 || [], flow.flow_enabled);
+          const lastRunTime = last10?.[0]?.created_at || null;
+          const monthlySpend = (monthRuns || []).reduce((sum, r) => sum + Number(r.cost_usd), 0);
 
-        const status = computeStatus(last10 || [], flow.flow_enabled);
-        const lastRunTime = last10?.[0]?.created_at || null;
-        const monthlySpend = (monthRuns || []).reduce((sum, r) => sum + Number(r.cost_usd), 0);
-
-        return {
-          id: flow.id,
-          name: flow.name,
-          platform: flow.platform,
-          model: flow.model,
-          status,
-          lastRun: lastRunTime,
-          runsToday: todayRuns?.length || 0,
-          costToday: todayRuns?.reduce((sum, r) => sum + Number(r.cost_usd), 0) || 0,
-          flow_enabled: flow.flow_enabled,
-          budget_limit: flow.budget_limit,
-          monthlySpend,
-        };
-      })
-    );
+          return {
+            id: flow.id,
+            name: flow.name,
+            platform: flow.platform,
+            model: flow.model,
+            status,
+            lastRun: lastRunTime,
+            runsToday: todayRuns?.length || 0,
+            costToday: todayRuns?.reduce((sum, r) => sum + Number(r.cost_usd), 0) || 0,
+            flow_enabled: flow.flow_enabled,
+            budget_limit: flow.budget_limit,
+            monthlySpend,
+          };
+        })
+      ),
+      supabase.from("runs").select("cost_usd, flow_id").in("flow_id", flowIds).gte("created_at", todayStart.toISOString()),
+    ]);
 
     setFlows(enriched);
-
-    const { data: allTodayRuns } = await supabase
-      .from("runs")
-      .select("cost_usd, flow_id")
-      .gte("created_at", todayStart.toISOString());
-
-    const userFlowIds = new Set(flowsData.map((f) => f.id));
-    const userTodayRuns = (allTodayRuns || []).filter((r) => userFlowIds.has(r.flow_id));
-
-    setRunsToday(userTodayRuns.length);
-    setSpendToday(userTodayRuns.reduce((sum, r) => sum + Number(r.cost_usd), 0));
+    setRunsToday((allTodayRuns || []).length);
+    setSpendToday((allTodayRuns || []).reduce((sum, r) => sum + Number(r.cost_usd), 0));
     setLoading(false);
   }, [user]);
+
+  useEffect(() => { fetchDataRef.current = fetchData; }, [fetchData]);
 
   useEffect(() => {
     fetchData();
@@ -142,10 +133,10 @@ const Dashboard = () => {
     if (!user) return;
     const channel = supabase
       .channel("runs-realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "runs" }, () => fetchData())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "runs" }, () => fetchDataRef.current())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user, fetchData]);
+  }, [user]);
 
   const toggleFlowEnabled = async (flowId: string, currentEnabled: boolean, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -155,8 +146,31 @@ const Dashboard = () => {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen bg-background">
+        <nav className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-8 py-4 border-b border-border bg-background/95 backdrop-blur-sm">
+          <span className="font-display text-[22px] tracking-tight">Flow<span className="text-primary">Ledger</span></span>
+        </nav>
+        <div className="max-w-[1100px] mx-auto px-4 sm:px-8 py-6 sm:py-10">
+          <div className="h-8 w-36 bg-muted rounded animate-pulse mb-8" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="border border-border rounded-xl px-5 py-4 bg-card">
+                <div className="h-3 w-24 bg-muted rounded animate-pulse mb-3" />
+                <div className="h-7 w-16 bg-muted rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+          <div className="border border-border rounded-xl bg-card overflow-hidden">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="px-5 py-4 border-b border-border last:border-0 flex items-center gap-6">
+                <div className="h-4 w-4 bg-muted rounded animate-pulse" />
+                <div className="h-4 w-40 bg-muted rounded animate-pulse" />
+                <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                <div className="h-5 w-14 bg-muted rounded-full animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

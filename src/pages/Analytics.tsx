@@ -58,13 +58,14 @@ const Analytics = () => {
     const flowIds = flows.map((f) => f.id);
     const flowMap = new Map(flows.map((f) => [f.id, f]));
     const { days, from } = getDays();
+    const monthStart = startOfMonth(new Date());
+    const todayStart = startOfDay(new Date());
 
-    // Runs for chart range
-    const { data: rangeRuns } = await supabase
-      .from("runs")
-      .select("cost_usd, created_at, flow_id")
-      .in("flow_id", flowIds)
-      .gte("created_at", from.toISOString());
+    const [{ data: rangeRuns }, { data: monthRuns }, { data: todayRuns }] = await Promise.all([
+      supabase.from("runs").select("cost_usd, created_at, flow_id").in("flow_id", flowIds).gte("created_at", from.toISOString()),
+      supabase.from("runs").select("cost_usd, flow_id, token_count, created_at").in("flow_id", flowIds).gte("created_at", monthStart.toISOString()),
+      supabase.from("runs").select("token_count").in("flow_id", flowIds).gte("created_at", todayStart.toISOString()),
+    ]);
 
     // Build chart data
     const dayMap: Record<string, number> = {};
@@ -72,49 +73,29 @@ const Analytics = () => {
       const d = format(subDays(new Date(), i), days <= 7 ? "EEE" : "MMM d");
       dayMap[d] = 0;
     }
-
     (rangeRuns || []).forEach((r) => {
       const dayKey = format(new Date(r.created_at), days <= 7 ? "EEE" : "MMM d");
       if (dayKey in dayMap) dayMap[dayKey] += Number(r.cost_usd);
     });
-
     setChartData(Object.entries(dayMap).map(([day, cost]) => ({ day, cost: Number(cost.toFixed(4)) })));
 
     // Monthly spend per flow
-    const monthStart = startOfMonth(new Date());
-    const { data: monthRuns } = await supabase
-      .from("runs")
-      .select("cost_usd, flow_id, token_count, created_at")
-      .in("flow_id", flowIds)
-      .gte("created_at", monthStart.toISOString());
-
     const flowCostMap: Record<string, number> = {};
     const flowRunCount: Record<string, number> = {};
     let monthTokens = 0;
-
     (monthRuns || []).forEach((r) => {
       flowCostMap[r.flow_id] = (flowCostMap[r.flow_id] || 0) + Number(r.cost_usd);
       flowRunCount[r.flow_id] = (flowRunCount[r.flow_id] || 0) + 1;
       monthTokens += Number(r.token_count);
     });
-
     const sortedFlows: FlowSpend[] = Object.entries(flowCostMap)
       .map(([id, totalCost]) => {
         const flow = flowMap.get(id);
         return { id, name: flow?.name || "Unknown", platform: flow?.platform || "", totalCost, runCount: flowRunCount[id] || 0 };
       })
       .sort((a, b) => b.totalCost - a.totalCost);
-
     setFlowSpends(sortedFlows);
     setTokensMonth(monthTokens);
-
-    // Tokens today
-    const todayStart = startOfDay(new Date());
-    const { data: todayRuns } = await supabase
-      .from("runs")
-      .select("token_count")
-      .in("flow_id", flowIds)
-      .gte("created_at", todayStart.toISOString());
 
     setTokensToday((todayRuns || []).reduce((sum, r) => sum + Number(r.token_count), 0));
     setLoading(false);
@@ -124,8 +105,25 @@ const Analytics = () => {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen bg-background">
+        <nav className="sticky top-0 z-50 flex items-center justify-between px-8 py-4 border-b border-border bg-background/95 backdrop-blur-sm">
+          <span className="font-display text-[22px] tracking-tight">Flow<span className="text-primary">Ledger</span></span>
+        </nav>
+        <div className="max-w-[1100px] mx-auto px-8 py-10">
+          <div className="h-8 w-32 bg-muted rounded animate-pulse mb-8" />
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            {[1, 2].map((i) => (
+              <div key={i} className="border border-border rounded-xl px-5 py-4 bg-card">
+                <div className="h-3 w-28 bg-muted rounded animate-pulse mb-3" />
+                <div className="h-7 w-20 bg-muted rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+          <div className="border border-border rounded-xl bg-card p-6 mb-8">
+            <div className="h-5 w-36 bg-muted rounded animate-pulse mb-6" />
+            <div className="h-[320px] bg-muted rounded animate-pulse" />
+          </div>
+        </div>
       </div>
     );
   }

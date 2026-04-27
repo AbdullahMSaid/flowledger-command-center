@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -49,6 +49,7 @@ const FlowDetail = () => {
   const [copied, setCopied] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const fetchDataRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const webhookUrl = `${supabaseUrl}/functions/v1/ingest/${id}`;
@@ -56,44 +57,21 @@ const FlowDetail = () => {
   const fetchData = useCallback(async () => {
     if (!id || !user) return;
 
-    const { data: flowData } = await supabase
-      .from("flows")
-      .select("*")
-      .eq("id", id)
-      .single();
-
+    const { data: flowData } = await supabase.from("flows").select("*").eq("id", id).single();
     if (!flowData) {
       navigate("/dashboard");
       return;
     }
-
     setFlow(flowData);
 
-    // Last 10 for status
-    const { data: last10 } = await supabase
-      .from("runs")
-      .select("status")
-      .eq("flow_id", id)
-      .order("created_at", { ascending: false })
-      .limit(10);
+    const [{ data: last10 }, { data: recentRuns }, { data: allRuns }] = await Promise.all([
+      supabase.from("runs").select("status").eq("flow_id", id).order("created_at", { ascending: false }).limit(10),
+      supabase.from("runs").select("*").eq("flow_id", id).order("created_at", { ascending: false }).limit(20),
+      supabase.from("runs").select("status, cost_usd").eq("flow_id", id),
+    ]);
 
     setStatus(computeStatus(last10 || []));
-
-    // Last 20 for table
-    const { data: recentRuns } = await supabase
-      .from("runs")
-      .select("*")
-      .eq("flow_id", id)
-      .order("created_at", { ascending: false })
-      .limit(20);
-
     setRuns(recentRuns || []);
-
-    // All-time stats
-    const { data: allRuns } = await supabase
-      .from("runs")
-      .select("status, cost_usd")
-      .eq("flow_id", id);
 
     const all = allRuns || [];
     setTotalRuns(all.length);
@@ -107,26 +85,21 @@ const FlowDetail = () => {
     setLoading(false);
   }, [id, user, navigate]);
 
+  useEffect(() => { fetchDataRef.current = fetchData; }, [fetchData]);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Realtime
+  // Realtime — depends only on id/user so subscription is stable across fetchData recreations
   useEffect(() => {
     if (!id || !user) return;
     const channel = supabase
       .channel(`runs-flow-${id}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "runs", filter: `flow_id=eq.${id}` },
-        () => fetchData()
-      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "runs", filter: `flow_id=eq.${id}` }, () => fetchDataRef.current())
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [id, user, fetchData]);
+    return () => { supabase.removeChannel(channel); };
+  }, [id, user]);
 
   const resetRuns = async () => {
     setResetting(true);
@@ -144,8 +117,35 @@ const FlowDetail = () => {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-ink2">Loading...</p>
+      <div className="min-h-screen bg-background">
+        <nav className="sticky top-0 z-50 flex items-center justify-between px-8 py-4 border-b border-border bg-background/95 backdrop-blur-sm">
+          <span className="font-display text-[22px] tracking-tight">Flow<span className="text-primary">Ledger</span></span>
+        </nav>
+        <div className="max-w-[1100px] mx-auto px-8 py-10">
+          <div className="h-8 w-48 bg-muted rounded animate-pulse mb-2" />
+          <div className="h-4 w-32 bg-muted rounded animate-pulse mb-8" />
+          <div className="border border-border rounded-xl bg-card p-5 mb-8">
+            <div className="h-3 w-24 bg-muted rounded animate-pulse mb-3" />
+            <div className="h-9 w-full bg-muted rounded-lg animate-pulse" />
+          </div>
+          <div className="grid grid-cols-3 gap-4 mb-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="border border-border rounded-xl px-5 py-4 bg-card">
+                <div className="h-3 w-20 bg-muted rounded animate-pulse mb-3" />
+                <div className="h-7 w-16 bg-muted rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+          <div className="border border-border rounded-xl bg-card overflow-hidden">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="px-5 py-4 border-b border-border last:border-0 flex items-center gap-6">
+                <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+                <div className="h-5 w-14 bg-muted rounded-full animate-pulse" />
+                <div className="h-4 w-16 bg-muted rounded animate-pulse ml-auto" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

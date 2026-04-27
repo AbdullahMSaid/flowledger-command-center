@@ -1,21 +1,19 @@
 import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { format, subDays, startOfDay } from "date-fns";
 
 type DaySpend = { day: string; cost: number };
 
 const SpendChart = () => {
+  const { user } = useAuth();
   const [data, setData] = useState<DaySpend[]>([]);
 
   useEffect(() => {
-    const fetchSpend = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+    if (!user) return;
 
-      // Get user's flow IDs
+    const fetchSpend = async () => {
       const { data: flows } = await supabase
         .from("flows")
         .select("id")
@@ -53,7 +51,7 @@ const SpendChart = () => {
     };
 
     fetchSpend();
-  }, []);
+  }, [user]);
 
   return (
     <div className="border border-border rounded-xl bg-card p-6">
