@@ -8,7 +8,15 @@ import SimulateRunButton from "@/components/dashboard/SimulateRunButton";
 import BulkSimulateButton from "@/components/dashboard/BulkSimulateButton";
 import SpendChart from "@/components/dashboard/SpendChart";
 import { formatDistanceToNow } from "date-fns";
-import { Pause, Play, DollarSign, Bell, BarChart3 } from "lucide-react";
+import { Pause, Play, DollarSign, Bell, BarChart3, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import RenameFlowModal from "@/components/dashboard/RenameFlowModal";
+import DeleteFlowModal from "@/components/dashboard/DeleteFlowModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type FlowWithStats = {
   id: string;
@@ -48,6 +56,8 @@ const Dashboard = () => {
   const [spendToday, setSpendToday] = useState(0);
   const [showAddFlow, setShowAddFlow] = useState(false);
   const [budgetFlow, setBudgetFlow] = useState<FlowWithStats | null>(null);
+  const [renameFlow, setRenameFlow] = useState<FlowWithStats | null>(null);
+  const [deleteFlow, setDeleteFlow] = useState<FlowWithStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   const todayStart = new Date();
@@ -160,6 +170,7 @@ const Dashboard = () => {
         </Link>
         <div className="flex items-center gap-2 sm:gap-4">
           <Link to="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Docs</Link>
+          <Link to="/setup" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Setup Guide</Link>
           <span className="text-sm text-muted-foreground hidden sm:inline">{user?.email}</span>
           <button onClick={signOut} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
             Sign out
@@ -299,6 +310,33 @@ const Dashboard = () => {
                           <DollarSign size={14} />
                         </button>
                         <SimulateRunButton flowId={flow.id} onSuccess={fetchData} />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                              title="More options"
+                            >
+                              <MoreHorizontal size={14} />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-36">
+                            <DropdownMenuItem
+                              onClick={(e) => { e.stopPropagation(); setRenameFlow(flow); }}
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <Pencil size={13} />
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => { e.stopPropagation(); setDeleteFlow(flow); }}
+                              className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+                            >
+                              <Trash2 size={13} />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   );
@@ -360,6 +398,32 @@ const Dashboard = () => {
                         <DollarSign size={14} />
                       </button>
                       <SimulateRunButton flowId={flow.id} onSuccess={fetchData} />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground"
+                          >
+                            <MoreHorizontal size={14} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-36">
+                          <DropdownMenuItem
+                            onClick={(e) => { e.stopPropagation(); setRenameFlow(flow); }}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <Pencil size={13} />
+                            Rename
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => { e.stopPropagation(); setDeleteFlow(flow); }}
+                            className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+                          >
+                            <Trash2 size={13} />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                   {flow.budget_limit !== null && (
@@ -405,6 +469,24 @@ const Dashboard = () => {
           currentBudget={budgetFlow.budget_limit}
           onClose={() => setBudgetFlow(null)}
           onSaved={() => { setBudgetFlow(null); fetchData(); }}
+        />
+      )}
+
+      {renameFlow && (
+        <RenameFlowModal
+          flowId={renameFlow.id}
+          currentName={renameFlow.name}
+          onClose={() => setRenameFlow(null)}
+          onSaved={() => { setRenameFlow(null); fetchData(); }}
+        />
+      )}
+
+      {deleteFlow && (
+        <DeleteFlowModal
+          flowId={deleteFlow.id}
+          flowName={deleteFlow.name}
+          onClose={() => setDeleteFlow(null)}
+          onDeleted={() => { setDeleteFlow(null); fetchData(); }}
         />
       )}
     </div>

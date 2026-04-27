@@ -14,6 +14,7 @@ import Alerts from "./pages/Alerts.tsx";
 import Analytics from "./pages/Analytics.tsx";
 import Investors from "./pages/Investors.tsx";
 import Docs from "./pages/Docs.tsx";
+import Setup from "./pages/Setup.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/investors" element={<Investors />} />
           <Route path="/docs" element={<Docs />} />
+          <Route path="/setup" element={<Setup />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
