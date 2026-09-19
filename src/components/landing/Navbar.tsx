@@ -4,8 +4,7 @@ import { Menu, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const routeLinks = [
-  { label: "Docs", href: "/docs" },
-  { label: "Investors", href: "/investors" },
+  { label: "Help", href: "/docs" },
 ];
 
 const hashLinks = [
@@ -73,7 +72,7 @@ const Navbar = () => {
               to="/signup"
               className="bg-foreground text-background px-5 py-2.5 rounded-lg text-sm font-medium tracking-tight hover:opacity-90 transition-opacity"
             >
-              Start free →
+              Explore sample →
             </Link>
           )}
           {/* Mobile menu toggle */}

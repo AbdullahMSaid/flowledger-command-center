@@ -1,299 +1,38 @@
-import { useEffect, useState, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import AppShell from "@/components/app/AppShell";
 import { useAuth } from "@/hooks/useAuth";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { format, subDays, startOfDay, startOfMonth } from "date-fns";
-import { ArrowLeft, Calendar } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarPicker } from "@/components/ui/calendar";
-import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-type DaySpend = { day: string; cost: number };
-type FlowSpend = { id: string; name: string; platform: string; totalCost: number; runCount: number };
+type Metric = "cost" | "runs" | "tokens";
+type ChartPoint = { label: string; cost: number; runs: number; tokens: number };
+type Breakdown = { id: string; name: string; platform: string; cost: number; runs: number; tokens: number };
 
-const rangeOptions = [
-  { label: "7 days", value: "7" },
-  { label: "30 days", value: "30" },
-  { label: "Custom", value: "custom" },
-];
+const startUtcDaysAgo = (days: number) => { const now = new Date(); return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - days + 1)); };
+const money = (value: number) => `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const Analytics = () => {
-  const { user, loading: authLoading, signOut } = useAuth();
-  const navigate = useNavigate();
-
-  const [range, setRange] = useState("7");
-  const [customFrom, setCustomFrom] = useState<Date | undefined>(subDays(new Date(), 6));
-  const [customTo, setCustomTo] = useState<Date | undefined>(new Date());
-
-  const [chartData, setChartData] = useState<DaySpend[]>([]);
-  const [flowSpends, setFlowSpends] = useState<FlowSpend[]>([]);
-  const [tokensToday, setTokensToday] = useState(0);
-  const [tokensMonth, setTokensMonth] = useState(0);
-  const [loading, setLoading] = useState(true);
-
-  const getDays = useCallback(() => {
-    if (range === "custom" && customFrom && customTo) {
-      const diff = Math.ceil((customTo.getTime() - customFrom.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      return { days: Math.max(diff, 1), from: startOfDay(customFrom) };
-    }
-    const numDays = parseInt(range);
-    return { days: numDays, from: startOfDay(subDays(new Date(), numDays - 1)) };
-  }, [range, customFrom, customTo]);
-
-  const fetchData = useCallback(async () => {
-    if (!user) return;
-
-    const { data: flows } = await supabase.from("flows").select("id, name, platform").eq("user_id", user.id);
-    if (!flows || flows.length === 0) {
-      setChartData([]);
-      setFlowSpends([]);
-      setTokensToday(0);
-      setTokensMonth(0);
-      setLoading(false);
-      return;
-    }
-
-    const flowIds = flows.map((f) => f.id);
-    const flowMap = new Map(flows.map((f) => [f.id, f]));
-    const { days, from } = getDays();
-    const monthStart = startOfMonth(new Date());
-    const todayStart = startOfDay(new Date());
-
-    const [{ data: rangeRuns }, { data: monthRuns }, { data: todayRuns }] = await Promise.all([
-      supabase.from("runs").select("cost_usd, created_at, flow_id").in("flow_id", flowIds).gte("created_at", from.toISOString()),
-      supabase.from("runs").select("cost_usd, flow_id, token_count, created_at").in("flow_id", flowIds).gte("created_at", monthStart.toISOString()),
-      supabase.from("runs").select("token_count").in("flow_id", flowIds).gte("created_at", todayStart.toISOString()),
-    ]);
-
-    // Build chart data
-    const dayMap: Record<string, number> = {};
-    for (let i = days - 1; i >= 0; i--) {
-      const d = format(subDays(new Date(), i), days <= 7 ? "EEE" : "MMM d");
-      dayMap[d] = 0;
-    }
-    (rangeRuns || []).forEach((r) => {
-      const dayKey = format(new Date(r.created_at), days <= 7 ? "EEE" : "MMM d");
-      if (dayKey in dayMap) dayMap[dayKey] += Number(r.cost_usd);
-    });
-    setChartData(Object.entries(dayMap).map(([day, cost]) => ({ day, cost: Number(cost.toFixed(4)) })));
-
-    // Monthly spend per flow
-    const flowCostMap: Record<string, number> = {};
-    const flowRunCount: Record<string, number> = {};
-    let monthTokens = 0;
-    (monthRuns || []).forEach((r) => {
-      flowCostMap[r.flow_id] = (flowCostMap[r.flow_id] || 0) + Number(r.cost_usd);
-      flowRunCount[r.flow_id] = (flowRunCount[r.flow_id] || 0) + 1;
-      monthTokens += Number(r.token_count);
-    });
-    const sortedFlows: FlowSpend[] = Object.entries(flowCostMap)
-      .map(([id, totalCost]) => {
-        const flow = flowMap.get(id);
-        return { id, name: flow?.name || "Unknown", platform: flow?.platform || "", totalCost, runCount: flowRunCount[id] || 0 };
-      })
-      .sort((a, b) => b.totalCost - a.totalCost);
-    setFlowSpends(sortedFlows);
-    setTokensMonth(monthTokens);
-
-    setTokensToday((todayRuns || []).reduce((sum, r) => sum + Number(r.token_count), 0));
-    setLoading(false);
-  }, [user, getDays]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <nav className="sticky top-0 z-50 flex items-center justify-between px-8 py-4 border-b border-border bg-background/95 backdrop-blur-sm">
-          <span className="font-display text-[22px] tracking-tight">Flow<span className="text-primary">Ledger</span></span>
-        </nav>
-        <div className="max-w-[1100px] mx-auto px-8 py-10">
-          <div className="h-8 w-32 bg-muted rounded animate-pulse mb-8" />
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            {[1, 2].map((i) => (
-              <div key={i} className="border border-border rounded-xl px-5 py-4 bg-card">
-                <div className="h-3 w-28 bg-muted rounded animate-pulse mb-3" />
-                <div className="h-7 w-20 bg-muted rounded animate-pulse" />
-              </div>
-            ))}
-          </div>
-          <div className="border border-border rounded-xl bg-card p-6 mb-8">
-            <div className="h-5 w-36 bg-muted rounded animate-pulse mb-6" />
-            <div className="h-[320px] bg-muted rounded animate-pulse" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const top5 = flowSpends.slice(0, 5);
-
-  return (
-    <div className="min-h-screen bg-background">
-      <nav className="sticky top-0 z-50 flex items-center justify-between px-8 py-4 border-b border-border bg-background/95 backdrop-blur-sm">
-        <Link to="/" className="font-display text-[22px] tracking-tight">
-          Flow<span className="text-primary">Ledger</span>
-        </Link>
-        <div className="flex items-center gap-4">
-          <Link to="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Docs</Link>
-          <span className="text-sm text-muted-foreground">{user?.email}</span>
-          <button onClick={signOut} className="text-sm text-muted-foreground hover:text-foreground transition-colors">Sign out</button>
-        </div>
-      </nav>
-
-      <div className="max-w-[1100px] mx-auto px-8 py-10">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <button onClick={() => navigate("/dashboard")} className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
-            <ArrowLeft size={18} />
-          </button>
-          <h1 className="font-display text-3xl tracking-tight">Analytics</h1>
-        </div>
-
-        {/* Token metrics */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <div className="border border-border rounded-xl px-5 py-4 bg-card">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Tokens Today</div>
-            <div className="text-2xl font-display">{tokensToday.toLocaleString()}</div>
-          </div>
-          <div className="border border-border rounded-xl px-5 py-4 bg-card">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Tokens This Month</div>
-            <div className="text-2xl font-display">{tokensMonth.toLocaleString()}</div>
-          </div>
-        </div>
-
-        {/* Spend chart with range picker */}
-        <div className="border border-border rounded-xl bg-card p-6 mb-8">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="font-display text-lg tracking-tight">Spend over time</h3>
-            <div className="flex items-center gap-2">
-              {rangeOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setRange(opt.value)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-                    range === opt.value
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {range === "custom" && (
-            <div className="flex items-center gap-3 mb-5">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal text-sm", !customFrom && "text-muted-foreground")}>
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {customFrom ? format(customFrom, "MMM d, yyyy") : "From"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarPicker mode="single" selected={customFrom} onSelect={setCustomFrom} initialFocus className="p-3 pointer-events-auto" />
-                </PopoverContent>
-              </Popover>
-              <span className="text-muted-foreground text-sm">to</span>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal text-sm", !customTo && "text-muted-foreground")}>
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {customTo ? format(customTo, "MMM d, yyyy") : "To"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarPicker mode="single" selected={customTo} onSelect={setCustomTo} initialFocus className="p-3 pointer-events-auto" />
-                </PopoverContent>
-              </Popover>
-            </div>
-          )}
-
-          <div className="h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 0% / 0.06)" />
-                <XAxis dataKey="day" tick={{ fontSize: 12, fill: "hsl(240 4% 57%)" }} />
-                <YAxis tick={{ fontSize: 12, fill: "hsl(240 4% 57%)" }} tickFormatter={(v) => `$${v}`} />
-                <Tooltip
-                  formatter={(value: number) => [`$${value.toFixed(4)}`, "Cost"]}
-                  contentStyle={{
-                    background: "hsl(50 14% 97%)",
-                    border: "1px solid hsl(0 0% 0% / 0.08)",
-                    borderRadius: "8px",
-                    fontSize: "13px",
-                  }}
-                />
-                <Bar dataKey="cost" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Spend by flow table */}
-          <div className="lg:col-span-2 border border-border rounded-xl bg-card overflow-hidden">
-            <div className="px-5 py-4 border-b border-border">
-              <h3 className="font-display text-lg tracking-tight">Spend by flow — this month</h3>
-            </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Flow</th>
-                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Platform</th>
-                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">Runs</th>
-                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">Avg/Run</th>
-                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">Total Cost</th>
-                </tr>
-              </thead>
-              <tbody>
-                {flowSpends.length === 0 ? (
-                  <tr><td colSpan={5} className="px-5 py-8 text-center text-muted-foreground">No spend data yet.</td></tr>
-                ) : (
-                  flowSpends.map((f) => (
-                    <tr key={f.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/flows/${f.id}`)}>
-                      <td className="px-5 py-3.5 font-medium text-foreground">{f.name}</td>
-                      <td className="px-5 py-3.5 text-muted-foreground">{f.platform}</td>
-                      <td className="px-5 py-3.5 text-right text-muted-foreground">{f.runCount}</td>
-                      <td className="px-5 py-3.5 text-right text-muted-foreground">${f.runCount > 0 ? (f.totalCost / f.runCount).toFixed(4) : "—"}</td>
-                      <td className="px-5 py-3.5 text-right text-foreground">${f.totalCost.toFixed(4)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Top 5 most expensive flows */}
-          <div className="border border-border rounded-xl bg-card">
-            <div className="px-5 py-4 border-b border-border">
-              <h3 className="font-display text-lg tracking-tight">Top 5 costliest</h3>
-            </div>
-            <div className="divide-y divide-border">
-              {top5.length === 0 ? (
-                <div className="px-5 py-8 text-center text-muted-foreground text-sm">No data yet.</div>
-              ) : (
-                top5.map((f, i) => (
-                  <div key={f.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/30 transition-colors">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-xs font-medium text-muted-foreground w-5 shrink-0">#{i + 1}</span>
-                      <span className="text-sm font-medium text-foreground truncate">{f.name}</span>
-                    </div>
-                    <span className="text-sm text-foreground font-medium ml-3">${f.totalCost.toFixed(2)}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default Analytics;
+export default function Analytics() {
+  const { user, loading: authLoading, signOut } = useAuth(); const navigate = useNavigate();
+  const [days, setDays] = useState(7); const [metric, setMetric] = useState<Metric>("cost"); const [chart, setChart] = useState<ChartPoint[]>([]); const [breakdown, setBreakdown] = useState<Breakdown[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null); const [workspace, setWorkspace] = useState("My workspace");
+  const load = useCallback(async () => {
+    if (!user) return; setLoading(true); setError(null); const start = startUtcDaysAgo(days);
+    const membership = await supabase.from("workspace_members").select("workspace_id, workspaces(name)").eq("user_id", user.id).limit(1).maybeSingle();
+    if (membership.error || !membership.data?.workspace_id) { setError(membership.error?.message ?? "No workspace membership found."); setLoading(false); return; }
+    const workspaceRow = membership.data.workspaces as { name?: string } | null; if (workspaceRow?.name) setWorkspace(workspaceRow.name);
+    const flowsResponse = await supabase.from("flows").select("id, name, platform").eq("workspace_id", membership.data.workspace_id).is("archived_at", null);
+    if (flowsResponse.error) { setError(flowsResponse.error.message); setLoading(false); return; }
+    const flows = flowsResponse.data ?? []; const ids = flows.map(flow => flow.id);
+    if (!ids.length) { setChart([]); setBreakdown([]); setLoading(false); return; }
+    const runsResponse = await supabase.from("runs").select("flow_id, cost_usd, token_count, created_at, source").in("flow_id", ids).gte("created_at", start.toISOString()).not("source", "in", "(synthetic_demo,synthetic_seed)").order("created_at", { ascending: true }).limit(5000);
+    if (runsResponse.error) { setError(runsResponse.error.message); setLoading(false); return; }
+    const runs = runsResponse.data ?? []; const dates = Array.from({ length: days }, (_, index) => { const value = new Date(start); value.setUTCDate(value.getUTCDate() + index); return value; });
+    setChart(dates.map(date => { const key = date.toISOString().slice(0, 10); const selected = runs.filter(run => new Date(run.created_at).toISOString().slice(0, 10) === key); return { label: new Intl.DateTimeFormat("en-US", days === 7 ? { weekday: "short", timeZone: "UTC" } : { month: "short", day: "numeric", timeZone: "UTC" }).format(date), cost: selected.reduce((sum, run) => sum + Number(run.cost_usd), 0), runs: selected.length, tokens: selected.reduce((sum, run) => sum + Number(run.token_count), 0) }; }));
+    setBreakdown(flows.map(flow => { const selected = runs.filter(run => run.flow_id === flow.id); return { id: flow.id, name: flow.name, platform: flow.platform, cost: selected.reduce((sum, run) => sum + Number(run.cost_usd), 0), runs: selected.length, tokens: selected.reduce((sum, run) => sum + Number(run.token_count), 0) }; }).sort((a, b) => b[metric] - a[metric])); setLoading(false);
+  }, [user, days, metric]);
+  useEffect(() => { void load(); }, [load]);
+  const totals = chart.reduce((acc, point) => ({ cost: acc.cost + point.cost, runs: acc.runs + point.runs, tokens: acc.tokens + point.tokens }), { cost: 0, runs: 0, tokens: 0 });
+  if (authLoading) return null;
+  return <AppShell userLabel={user?.email} workspaceLabel={workspace} onSignOut={signOut}><div className="space-y-5"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h1 className="text-xl font-semibold tracking-[-.02em]">Analytics</h1><p className="mt-1 text-xs text-slate-500">Observed workspace telemetry · UTC · synthetic sources excluded</p></div><div className="flex rounded-md border border-slate-200 bg-white p-0.5">{[7,30].map(value => <button key={value} onClick={() => setDays(value)} className={cn("rounded px-3 py-1.5 text-xs font-medium", days === value ? "bg-blue-600 text-white" : "text-slate-500")}>Last {value} days</button>)}</div></div>{error ? <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">Analytics unavailable: {error}</div> : null}<section className="overflow-hidden rounded-lg border border-slate-200 bg-white"><div className="grid grid-cols-3 divide-x divide-slate-200">{[["Cost", money(totals.cost)], ["Runs", totals.runs.toLocaleString()], ["Tokens", totals.tokens.toLocaleString()]].map(([label,value]) => <div key={label} className="p-4"><div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label} · {days} days</div><div className="mt-2 text-2xl font-semibold tabular-nums">{loading ? "—" : value}</div></div>)}</div></section><section className="rounded-lg border border-slate-200 bg-white p-4"><div className="flex items-center justify-between"><div><h2 className="text-sm font-semibold">Usage over time</h2><p className="mt-0.5 text-[11px] text-slate-400">One metric at a time keeps the trend readable.</p></div><div className="flex rounded-md bg-slate-100 p-0.5">{(["cost","runs","tokens"] as Metric[]).map(value => <button key={value} onClick={() => setMetric(value)} className={cn("rounded px-2.5 py-1 text-[11px] font-medium capitalize", metric === value ? "bg-white text-blue-700 shadow-sm" : "text-slate-500")}>{value}</button>)}</div></div><div className="mt-4 h-[300px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={chart} margin={{ left: -15, right: 4 }}><CartesianGrid vertical={false} stroke="#e8edf3"/><XAxis dataKey="label" tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false}/><YAxis tick={{ fontSize: 10, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={value => metric === "cost" ? `$${value}` : Number(value).toLocaleString()}/><Tooltip formatter={(value: number) => [metric === "cost" ? money(value) : value.toLocaleString(), metric]} contentStyle={{ border: "1px solid #e2e8f0", borderRadius: 6, fontSize: 11, boxShadow: "none" }}/><Bar dataKey={metric} fill="#2563eb" radius={[3,3,0,0]}/></BarChart></ResponsiveContainer></div></section><section className="overflow-hidden rounded-lg border border-slate-200 bg-white"><div className="border-b border-slate-200 px-4 py-3"><h2 className="text-sm font-semibold">Breakdown by flow</h2></div><div className="overflow-x-auto"><table className="w-full min-w-[680px] text-xs"><thead className="bg-slate-50 text-left text-[10px] uppercase tracking-wider text-slate-400"><tr><th className="px-4 py-2.5">Flow</th><th className="px-4 py-2.5">Platform</th><th className="px-4 py-2.5 text-right">Cost</th><th className="px-4 py-2.5 text-right">Runs</th><th className="px-4 py-2.5 text-right">Tokens</th></tr></thead><tbody className="divide-y divide-slate-100">{breakdown.map(row => <tr key={row.id} onClick={() => navigate(`/flows/${row.id}`)} className="cursor-pointer hover:bg-blue-50/40"><td className="px-4 py-3 font-medium">{row.name}</td><td className="px-4 py-3 text-slate-500">{row.platform}</td><td className="px-4 py-3 text-right tabular-nums">{money(row.cost)}</td><td className="px-4 py-3 text-right tabular-nums">{row.runs.toLocaleString()}</td><td className="px-4 py-3 text-right tabular-nums">{row.tokens.toLocaleString()}</td></tr>)}{!loading && !breakdown.length ? <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-400">No observed telemetry in this period.</td></tr> : null}</tbody></table></div></section></div></AppShell>;
+}

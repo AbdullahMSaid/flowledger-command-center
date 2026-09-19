@@ -11,6 +11,8 @@ const buildScript = (webhookUrl: string) => `#!/usr/bin/env bash
 
 WEBHOOK="${webhookUrl}"
 
+FLOWLEDGER_CREDENTIAL="$FLOWLEDGER_FLOW_CREDENTIAL"
+
 flowledger_preexec() {
   _fl_start=$(date +%s%3N)
   _fl_cmd="$1"
@@ -25,12 +27,15 @@ flowledger_precmd() {
   [[ $exit_code -ne 0 ]] && status="error"
 
   curl -s -X POST "$WEBHOOK" \\
+    -H "Authorization: Bearer $FLOWLEDGER_CREDENTIAL" \\
     -H "Content-Type: application/json" \\
     -d "{
+      \\"event_id\\": \\"claude-session-$(date +%s)-$$\\",
       \\"status\\": \\"$status\\",
       \\"duration_ms\\": $duration,
       \\"cost_usd\\": 0,
-      \\"token_count\\": 0
+      \\"token_count\\": 0,
+      \\"source\\": \\"monitor\\"
     }" > /dev/null 2>&1 &
 
   unset _fl_start _fl_cmd
@@ -114,21 +119,9 @@ const ClaudeCodeTab = ({ userId }: { userId: string }) => {
   };
 
   const handleTestRun = async () => {
-    setTestLoading(true);
-    setTestError("");
-    try {
-      const res = await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "success", duration_ms: 2400, token_count: 850, cost_usd: 0.02 }),
-      });
-      if (!res.ok) throw new Error(`Server responded with ${res.status}`);
-      setTestSuccess(true);
-    } catch (e) {
-      setTestError(e instanceof Error ? e.message : "Request failed");
-    } finally {
-      setTestLoading(false);
-    }
+    setTestLoading(false);
+    setTestSuccess(false);
+    setTestError("A scoped flow credential is required. Set FLOWLEDGER_FLOW_CREDENTIAL and run the authenticated script above; this page will not send unauthenticated telemetry.");
   };
 
   if (webhookUrl) {

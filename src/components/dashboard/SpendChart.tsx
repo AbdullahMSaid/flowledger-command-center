@@ -14,10 +14,21 @@ const SpendChart = () => {
     if (!user) return;
 
     const fetchSpend = async () => {
+      const { data: membership } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+      if (!membership?.workspace_id) {
+        setData([]);
+        return;
+      }
+
       const { data: flows } = await supabase
         .from("flows")
         .select("id")
-        .eq("user_id", user.id);
+        .eq("workspace_id", membership.workspace_id);
 
       if (!flows || flows.length === 0) {
         setData([]);

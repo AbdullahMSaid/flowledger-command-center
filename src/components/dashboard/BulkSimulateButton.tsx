@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const errorMessages = [
   "Timeout after 30s",
@@ -13,6 +14,8 @@ const BulkSimulateButton = ({ flowIds, onSuccess }: { flowIds: string[]; onSucce
 
   const runBulk = async () => {
     if (flowIds.length === 0) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
     setState("running");
     setProgress(0);
 
@@ -30,17 +33,21 @@ const BulkSimulateButton = ({ flowIds, onSuccess }: { flowIds: string[]; onSucce
       };
 
       try {
-        await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ingest/${flowId}`,
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        if (!supabaseUrl) throw new Error("Supabase is not configured");
+        const response = await fetch(
+          `${supabaseUrl}/functions/v1/ingest/${flowId}`,
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              Authorization: `Bearer ${session.access_token}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({ ...payload, event_id: crypto.randomUUID(), source: "live" }),
           }
         );
+        const result = await response.json().catch(() => null);
+        if (!response.ok || result?.error) throw new Error(result?.error ?? "Failed to record run");
       } catch {
         // continue on failure
       }

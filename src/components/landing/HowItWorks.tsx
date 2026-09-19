@@ -1,18 +1,18 @@
 const steps = [
   {
     num: "01",
-    title: "Connect your stack",
-    desc: "One-click integrations with Zapier, Make, n8n, LangChain, OpenAI, Anthropic and 80+ more. No code required.",
+    title: "Register the workflows you want to track",
+    desc: "Connect any workflow that can send an authenticated webhook. FlowLedger records the metadata you choose to report; it does not discover private employee activity.",
   },
   {
     num: "02",
-    title: "Discover every flow",
-    desc: "FlowLedger auto-discovers all running automations and agents, maps their dependencies, and tracks their performance in real time.",
+    title: "See ownership and cost clearly",
+    desc: "Review registered workflows, owners, teams, reported spend, governance gaps, and telemetry health in one workspace-scoped view.",
   },
   {
     num: "03",
-    title: "Set limits. We enforce them.",
-    desc: "Define budget caps per flow or per workspace. When a workflow hits its limit, FlowLedger pauses it automatically — no overspend, no surprises.",
+    title: "Set limits. Guard the next call.",
+    desc: "Guard-connected workflows request permission before a costly call. FlowLedger can deny the next admission at the cap; monitor-only workflows remain reporting-only.",
   },
 ];
 
@@ -26,7 +26,7 @@ const HowItWorks = () => {
         From chaos to control,<br />in minutes
       </h2>
       <p className="text-base text-ink2 text-center font-light mb-16 max-w-[560px] mx-auto">
-        Connect your tools, and FlowLedger automatically discovers and maps every AI workflow running in your organization.
+        Register the workflows your team wants to understand, then use reported telemetry and cooperative guard decisions to make spend explainable.
       </p>
       <div className="grid md:grid-cols-3 gap-8">
         {steps.map((step) => (

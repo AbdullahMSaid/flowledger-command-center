@@ -10,17 +10,17 @@ const problemCards = [
 ];
 
 const marketStats = [
-  { stat: "$847B", label: "Global AI software market by 2030" },
-  { stat: "73%", label: "Enterprises with zero AI governance today" },
-  { stat: "11×", label: "YoY growth in enterprise workflow volume" },
-  { stat: "$0", label: "Dominant player in AI Ops category" },
+  { stat: "1", label: "Deterministic public failure-mode demo" },
+  { stat: "2", label: "Workspace roles: admin and member" },
+  { stat: "0", label: "Provider calls made by the public demo" },
+  { stat: "1", label: "Cooperative guard and settlement path" },
 ];
 
 const revenueStreams = [
-  { title: "SaaS Subscriptions", desc: "$49 → $499/mo. Seat-based + workflow volume tiers.", icon: "💳" },
-  { title: "Marketplace Cut", desc: "20% of template sales. Users publish workflow templates.", icon: "🏪" },
-  { title: "AI Spend Management", desc: "Negotiate bulk API rates with OpenAI, Anthropic. Resell with margin.", icon: "📊" },
-  { title: "Compliance Module", desc: "$50K+/yr enterprise. SOC2, GDPR-ready audit logs.", icon: "🛡️" },
+  { title: "Prototype scope", desc: "A local and staging build for testing runaway-spend controls.", icon: "🧪" },
+  { title: "Existing Supabase foundation", desc: "Workspace membership, RLS, server aggregates, and audited control RPCs.", icon: "🗄️" },
+  { title: "Cooperative guard protocol", desc: "A runner asks for admission before a counted provider callback, then settles actual cost.", icon: "🛡️" },
+  { title: "Future business model", desc: "Not decided or implemented in this prototype; billing and subscriptions remain out of scope.", icon: "📝" },
 ];
 
 /* ─── Tech Stack Data ─── */
@@ -59,8 +59,8 @@ const techLayers = [
     tools: [
       { name: "Webhook API", desc: "Event ingestion" },
       { name: "Bearer Auth", desc: "Token authentication" },
-      { name: "Upstash Redis", desc: "Rate limiting" },
-      { name: "REST API", desc: "Third-party integrations" },
+      { name: "Validation", desc: "Bounded server-side payloads" },
+      { name: "Workspace RPCs", desc: "Authorized management actions" },
     ],
   },
   {
@@ -69,10 +69,10 @@ const techLayers = [
     borderColor: "border-destructive/20",
     accentColor: "text-destructive",
     tools: [
-      { name: "Stripe", desc: "Checkout & subscriptions" },
-      { name: "Resend", desc: "Transactional email" },
-      { name: "Slack Webhooks", desc: "Team alerts" },
-      { name: "PagerDuty", desc: "Enterprise on-call" },
+      { name: "In-app alerts", desc: "Workspace-scoped history" },
+      { name: "Audit log", desc: "Actor, reason, old/new values" },
+      { name: "No billing", desc: "Not implemented" },
+      { name: "No outbound delivery", desc: "Explicitly unavailable" },
     ],
   },
   {
@@ -121,7 +121,7 @@ const Docs = () => {
             Why <em className="text-primary">FlowLedger</em> exists
           </h1>
           <p className="text-[17px] text-ink2 font-light max-w-2xl mx-auto leading-relaxed">
-            The AI Ops category doesn't exist yet. We're building it — before anyone else realizes the category exists.
+            A prototype for giving teams a clearer view of AI workflow spending, ownership, and control decisions.
           </p>
         </motion.div>
       </section>
@@ -185,7 +185,7 @@ const Docs = () => {
             Business Model
           </motion.p>
           <motion.h2 variants={fadeUp} custom={1} className="font-display text-[38px] leading-[1.1] tracking-tight text-center mb-14">
-            Four revenue streams. All compounding.
+            What is implemented today
           </motion.h2>
           <div className="grid md:grid-cols-2 gap-6">
             {revenueStreams.map((r, i) => (
@@ -217,7 +217,7 @@ const Docs = () => {
               Built to scale. Moving fast.
             </motion.h2>
             <motion.p variants={fadeUp} custom={2} className="text-base text-center font-light mb-16 max-w-xl mx-auto opacity-60">
-              Entire stack is serverless-first, type-safe, and deployable to production in under 5 minutes.
+              The prototype uses a serverless-friendly, typed foundation. Production deployment and operational readiness still require integration validation.
             </motion.p>
 
             <div className="space-y-6">
@@ -312,11 +312,11 @@ const Docs = () => {
               <h3 className="text-xs font-medium tracking-[1.5px] uppercase text-primary mb-5">Next 12 Months</h3>
               <ul className="space-y-3">
                 {[
-                  "Q2 2026 — 10 paying beta customers",
-                  "Q3 2026 — Full integration marketplace live",
-                  "Q3 2026 — Stripe billing + enterprise tier",
-                  "Q4 2026 — AI spend management module",
-                  "Q1 2027 — $1M ARR target",
+                  "Next — Run the configured Supabase guard smoke gate",
+                  "Next — Validate RLS and reservation races with local Postgres",
+                  "Later — Authenticated browser walkthrough with populated workspace",
+                  "Later — Evaluate notification delivery only after core gates pass",
+                  "Out of scope — Billing, marketplace, and provider adapters",
                 ].map((item) => (
                   <li key={item} className="text-sm text-ink2 pl-5 relative">
                     <span className="absolute left-0 text-primary font-medium">→</span>

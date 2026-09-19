@@ -17,6 +17,7 @@ type AlertRule = {
   slack_webhook_url: string | null;
   enabled: boolean;
   created_at: string;
+  workspace_id: string;
   flow_name?: string;
 };
 
@@ -50,15 +51,29 @@ const Alerts = () => {
   const [history, setHistory] = useState<AlertEvent[]>([]);
   const [flows, setFlows] = useState<{ id: string; name: string }[]>([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
 
+    const { data: membership } = await supabase
+      .from("workspace_members")
+      .select("workspace_id, role")
+      .eq("user_id", user.id)
+      .limit(1)
+      .maybeSingle();
+    if (!membership?.workspace_id) {
+      setRules([]); setHistory([]); setFlows([]); setLoading(false); return;
+    }
+    setWorkspaceId(membership.workspace_id);
+    setIsAdmin(membership.role === "admin");
+
     const [{ data: rulesData }, { data: historyData }, { data: flowsData }] = await Promise.all([
-      supabase.from("alert_rules").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("alert_history").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
-      supabase.from("flows").select("id, name").eq("user_id", user.id),
+      supabase.from("alert_rules").select("*").eq("workspace_id", membership.workspace_id).order("created_at", { ascending: false }),
+      supabase.from("alert_history").select("*").eq("workspace_id", membership.workspace_id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("flows").select("id, name").eq("workspace_id", membership.workspace_id).is("archived_at", null),
     ]);
 
     const flowMap = new Map((flowsData || []).map((f) => [f.id, f.name]));
@@ -93,11 +108,13 @@ const Alerts = () => {
   }, [user, fetchData]);
 
   const toggleRule = async (ruleId: string, currentEnabled: boolean) => {
+    if (!isAdmin) return;
     await supabase.from("alert_rules").update({ enabled: !currentEnabled }).eq("id", ruleId);
     fetchData();
   };
 
   const deleteRule = async (ruleId: string) => {
+    if (!isAdmin) return;
     await supabase.from("alert_rules").delete().eq("id", ruleId);
     fetchData();
   };
@@ -138,13 +155,13 @@ const Alerts = () => {
             </button>
             <h1 className="font-display text-3xl tracking-tight">Alerts</h1>
           </div>
-          <button
+          {isAdmin && <button
             onClick={() => setShowCreate(true)}
             className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-medium tracking-tight hover:opacity-90 transition-opacity flex items-center gap-2"
           >
             <Plus size={16} />
             Create alert rule
-          </button>
+          </button>}
         </div>
 
         {/* Active Alert Rules */}
@@ -172,12 +189,12 @@ const Alerts = () => {
                         <span>{rule.scope === "all" ? "All flows" : rule.flow_name}</span>
                         <span>·</span>
                         <span>
-                          {[rule.notify_email && "Email", rule.slack_webhook_url && "Slack"].filter(Boolean).join(", ") || "No notifications"}
+                          In-app only · {rule.enabled ? "enabled" : "disabled"}
                         </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-4">
-                      <button
+                      {isAdmin && <button
                         onClick={() => toggleRule(rule.id, rule.enabled)}
                         title={rule.enabled ? "Disable rule" : "Enable rule"}
                         className={`p-2 rounded-lg transition-colors ${
@@ -187,13 +204,13 @@ const Alerts = () => {
                         }`}
                       >
                         {rule.enabled ? <Bell size={16} /> : <BellOff size={16} />}
-                      </button>
-                      <button
+                      </button>}
+                      {isAdmin && <button
                         onClick={() => deleteRule(rule.id)}
                         className="text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1"
                       >
                         Delete
-                      </button>
+                      </button>}
                     </div>
                   </div>
                 ))}
@@ -205,6 +222,7 @@ const Alerts = () => {
         {/* Alert History */}
         <section>
           <h2 className="font-display text-xl tracking-tight mb-4">Alert History</h2>
+          <p className="text-sm text-muted-foreground mb-4">In-app alert history is workspace-scoped. Email and outbound webhook delivery are not enabled.</p>
           <div className="border border-border rounded-xl bg-card overflow-hidden">
             <table className="w-full text-sm">
               <thead>
@@ -252,6 +270,7 @@ const Alerts = () => {
         <CreateAlertRuleModal
           flows={flows}
           userId={user!.id}
+          workspaceId={workspaceId!}
           onClose={() => setShowCreate(false)}
           onCreated={() => { setShowCreate(false); fetchData(); }}
         />

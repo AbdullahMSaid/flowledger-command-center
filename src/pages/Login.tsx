@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
+import { enterLocalPreview, isLocalPreviewAuthEnabled } from "@/lib/localAuth";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -23,8 +24,16 @@ const Login = () => {
     }
   };
 
+  const handleSampleEntry = () => {
+    if (enterLocalPreview()) navigate("/dashboard");
+  };
+
   const handleGoogleLogin = async () => {
     setError("");
+    if (!isSupabaseConfigured) {
+      setError("Google sign-in requires Supabase configuration. Use the local preview account for this development build.");
+      return;
+    }
     setGoogleLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -43,10 +52,10 @@ const Login = () => {
           Flow<span className="text-primary">Ledger</span>
         </Link>
         <h1 className="font-display text-3xl tracking-tight text-center mb-2">Sign in</h1>
-        <p className="text-sm text-muted-foreground text-center mb-8">Welcome back. Enter your credentials below.</p>
+        <p className="text-sm text-muted-foreground text-center mb-8">{isLocalPreviewAuthEnabled ? "Explore the signed-in sample workspace on this local build." : "Welcome back. Enter your credentials below."}</p>
 
         {/* Google OAuth */}
-        <button
+        {!isLocalPreviewAuthEnabled && <button
           type="button"
           onClick={handleGoogleLogin}
           disabled={googleLoading}
@@ -59,57 +68,14 @@ const Login = () => {
             <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
           </svg>
           {googleLoading ? "Redirecting..." : "Continue with Google"}
-        </button>
+        </button>}
 
-        {/* Divider */}
-        <div className="flex items-center gap-3 my-6">
-          <div className="flex-1 h-px bg-border" />
-          <span className="text-xs text-muted-foreground uppercase tracking-wider">or</span>
-          <div className="flex-1 h-px bg-border" />
-        </div>
+        {isLocalPreviewAuthEnabled ? <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-center"><div className="text-sm font-semibold text-blue-950">Development-only sample</div><p className="mt-1 text-xs leading-5 text-blue-800">This opens isolated example data on your computer. It does not create an account or connect to Supabase.</p><button type="button" onClick={handleSampleEntry} className="mt-3 h-10 w-full rounded-md bg-blue-600 text-sm font-semibold text-white">Enter sample workspace</button><Link to="/demo" className="mt-3 inline-block text-xs font-semibold text-blue-700">Or explore the public demo</Link></div> : <><div className="flex items-center gap-3 my-6"><div className="flex-1 h-px bg-border" /><span className="text-xs text-muted-foreground uppercase tracking-wider">or</span><div className="flex-1 h-px bg-border" /></div><form onSubmit={handleLogin} className="flex flex-col gap-4"><div><label className="text-sm text-muted-foreground mb-1 block">Email</label><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-card text-foreground focus:outline-none focus:border-primary" placeholder="you@company.com" /></div><div><div className="flex items-center justify-between mb-1"><label className="text-sm text-muted-foreground">Password</label><Link to="/forgot-password" className="text-xs text-primary hover:underline">Forgot password?</Link></div><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-card text-foreground focus:outline-none focus:border-primary" placeholder="••••••••" /></div>{error && <p className="text-sm text-destructive">{error}</p>}<button type="submit" disabled={loading} className="bg-primary text-primary-foreground py-3 rounded-lg text-sm font-medium tracking-tight hover:opacity-90 transition-opacity disabled:opacity-50">{loading ? "Signing in..." : "Sign in"}</button></form></>}
 
-        <form onSubmit={handleLogin} className="flex flex-col gap-4">
-          <div>
-            <label className="text-sm text-muted-foreground mb-1 block">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-card text-foreground focus:outline-none focus:border-primary"
-              placeholder="you@company.com"
-            />
-          </div>
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-sm text-muted-foreground">Password</label>
-              <Link to="/forgot-password" className="text-xs text-primary hover:underline">
-                Forgot password?
-              </Link>
-            </div>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-card text-foreground focus:outline-none focus:border-primary"
-              placeholder="••••••••"
-            />
-          </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-primary text-primary-foreground py-3 rounded-lg text-sm font-medium tracking-tight hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
-
-        <p className="text-sm text-muted-foreground text-center mt-6">
+        {!isLocalPreviewAuthEnabled && <p className="text-sm text-muted-foreground text-center mt-6">
           Don't have an account?{" "}
           <Link to="/signup" className="text-primary hover:underline">Sign up</Link>
-        </p>
+        </p>}
       </div>
     </div>
   );

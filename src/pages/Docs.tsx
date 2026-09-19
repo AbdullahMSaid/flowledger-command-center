@@ -1,12 +1,14 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
+import ProductHelp from "@/pages/ProductHelp";
 
 const sections = [
-  { id: "introduction", label: "Introduction" },
-  { id: "quick-start", label: "Quick start" },
+  { id: "getting-started", label: "Getting started" },
+  { id: "developer-reference", label: "Developer reference" },
   { id: "payload-reference", label: "Payload reference" },
   { id: "claude-code", label: "Claude Code" },
   { id: "zapier", label: "Zapier" },
@@ -44,6 +46,9 @@ const P = ({ children }: { children: React.ReactNode }) => (
 
 const Docs = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchParams] = useSearchParams();
+  const productMode = searchParams.get("mode");
+  if (productMode === "demo" || productMode === "preview" || productMode === "account") return <ProductHelp mode={productMode} />;
 
   const SidebarNav = ({ className = "" }: { className?: string }) => (
     <nav className={className}>
@@ -103,13 +108,19 @@ const Docs = () => {
           <div className="mb-12">
             <div className="text-xs font-medium tracking-[2px] uppercase text-primary mb-3 font-body">Documentation</div>
             <h1 className="font-display text-[44px] leading-[1.1] tracking-tight mb-4">FlowLedger Docs</h1>
-            <P>Everything you need to connect your AI workflows and start tracking spend, errors, and performance.</P>
+            <P>Start with the business view: add a workflow, assign an owner, and review what needs attention. Technical connection instructions are kept below for the person who manages the workflow.</P>
           </div>
 
+          <SectionHeading id="getting-started">Getting started</SectionHeading>
+          <div className="grid gap-4 sm:grid-cols-3"><div className="rounded-xl border border-border p-4"><div className="text-sm font-semibold">1. Add a workflow</div><P>Give it a clear name and say where it runs. Start with only the information you know.</P></div><div className="rounded-xl border border-border p-4"><div className="text-sm font-semibold">2. Assign an owner</div><P>Someone should be responsible for reviewing its spending and decisions.</P></div><div className="rounded-xl border border-border p-4"><div className="text-sm font-semibold">3. Review issues</div><P>Use Overview for everyday work. Use Reviews when a trial or owner needs a decision.</P></div></div>
+
+          <SectionHeading id="developer-reference">Developer reference</SectionHeading>
+          <P>These instructions are for the person connecting a workflow. They are not needed to use the business dashboard.</P>
+
           {/* ═══ Section 1 — Introduction ═══ */}
-          <SectionHeading id="introduction">How FlowLedger works</SectionHeading>
+          <SectionHeading id="introduction">How connection works</SectionHeading>
           <P>
-            FlowLedger tracks any AI workflow by receiving run data through a simple webhook. Your workflow runs, then sends a POST request to your unique ingest URL. FlowLedger stores the run, calculates status, updates your spend, and fires any alerts — in real time. No SDK required. No agents. No proxy layers. Just a webhook.
+            FlowLedger records run telemetry through a small authenticated webhook. Your workflow runs, then sends a POST request with a stable event ID to your unique ingest URL. FlowLedger records incurred cost even when a flow is paused or over budget, then returns separate control guidance for the next guarded request. No SDK required. No provider calls are made by the demo.
           </P>
 
           {/* ═══ Section 2 — Quick start ═══ */}
@@ -143,9 +154,10 @@ const Docs = () => {
           </div>
 
           <CodeBlock lang="bash">{`curl -X POST https://your-project.supabase.co/functions/v1/ingest/YOUR_FLOW_ID \\
-  -H 'Authorization: Bearer your-api-key' \\
+  -H 'Authorization: Bearer your-supabase-access-token' \\
   -H 'Content-Type: application/json' \\
   -d '{
+    "event_id": "invoice-2026-09-17-0001",
     "status": "success",
     "duration_ms": 1840,
     "token_count": 1160,
@@ -166,6 +178,7 @@ const Docs = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
+                <tr><td className="px-4 py-3 font-mono text-primary text-[13px]">event_id</td><td className="px-4 py-3 text-ink2">string</td><td className="px-4 py-3 text-ink2">Yes</td><td className="px-4 py-3 text-ink2">Stable per-flow event ID; retries are idempotent</td></tr>
                 <tr><td className="px-4 py-3 font-mono text-primary text-[13px]">status</td><td className="px-4 py-3 text-ink2">string</td><td className="px-4 py-3 text-ink2">Yes</td><td className="px-4 py-3 text-ink2">'success' or 'error'</td></tr>
                 <tr><td className="px-4 py-3 font-mono text-primary text-[13px]">duration_ms</td><td className="px-4 py-3 text-ink2">integer</td><td className="px-4 py-3 text-ink2">Yes</td><td className="px-4 py-3 text-ink2">How long the run took in milliseconds</td></tr>
                 <tr><td className="px-4 py-3 font-mono text-primary text-[13px]">token_count</td><td className="px-4 py-3 text-ink2">integer</td><td className="px-4 py-3 text-ink2">Yes</td><td className="px-4 py-3 text-ink2">Total tokens consumed (input + output)</td></tr>
@@ -183,7 +196,7 @@ const Docs = () => {
 
           <SubHeading>Option 1 — Manual sync from Anthropic console</SubHeading>
           <P>
-            Go to console.anthropic.com → Usage. Note your token consumption for the session. POST that data to your FlowLedger ingest URL. Best for occasional tracking or auditing past usage.
+            Go to console.anthropic.com → Usage. Note your token consumption for the session. POST that data to your FlowLedger ingest URL using an authenticated Supabase access token and a stable event ID. Best for occasional tracking or auditing past usage.
           </P>
 
           <SubHeading>Option 2 — Wrap Claude Code with a tracking script</SubHeading>
@@ -196,6 +209,7 @@ const Docs = () => {
 
 FLOW_ID="your-flow-id-here"
 WEBHOOK="https://your-project.supabase.co/functions/v1/ingest/$FLOW_ID"
+FLOWLEDGER_ACCESS_TOKEN="your-supabase-access-token"
 
 START=$(date +%s%3N)
 claude "$@"
@@ -207,9 +221,9 @@ STATUS="success"
 if [ $EXIT_CODE -ne 0 ]; then STATUS="error"; fi
 
 curl -s -X POST "$WEBHOOK" \\
-  -H "Authorization: Bearer any-token" \\
+  -H "Authorization: Bearer $FLOWLEDGER_ACCESS_TOKEN" \\
   -H "Content-Type: application/json" \\
-  -d "{\\"status\\":\\"$STATUS\\",\\"duration_ms\\":$DURATION,\\"token_count\\":0,\\"cost_usd\\":0}"
+  -d "{\\"event_id\\":\\"claude-$(date +%s%3N)\\",\\"status\\":\\"$STATUS\\",\\"duration_ms\\":$DURATION,\\"token_count\\":0,\\"cost_usd\\":0}"
 
 echo "FlowLedger: session tracked"`}</CodeBlock>
 
@@ -277,11 +291,11 @@ echo "FlowLedger: session tracked"`}</CodeBlock>
 
           <SubHeading>Budget limits</SubHeading>
           <P>
-            Set a monthly budget limit on any flow from the dashboard. When total cost_usd for the month reaches the limit, FlowLedger automatically pauses the flow and returns this response to any further ingest requests:
+            Set a monthly budget limit on any flow from the dashboard. FlowLedger records incurred telemetry, then returns control guidance for subsequent work when the monthly limit is exceeded:
           </P>
-          <CodeBlock lang="json">{`{ "ok": false, "reason": "budget_exceeded" }`}</CodeBlock>
+          <CodeBlock lang="json">{`{ "recorded": true, "control": { "allow_next": false, "reason": "budget_exceeded" } }`}</CodeBlock>
           <P>
-            Your workflow should check for ok: false and handle the paused state — for example by notifying your team or skipping the AI step until the budget resets.
+            A telemetry response is not permission to start a new costly call. A cooperating runner must use the guard endpoint before execution and treat a denial as “provider callback not invoked.”
           </P>
 
           {/* ═══ Section 8 — Responses ═══ */}
@@ -296,16 +310,16 @@ echo "FlowLedger: session tracked"`}</CodeBlock>
               </thead>
               <tbody className="divide-y divide-border">
                 <tr>
-                  <td className="px-4 py-3 font-mono text-primary text-[13px]">{`{ ok: true, run_id: '...' }`}</td>
-                  <td className="px-4 py-3 text-ink2">Run recorded successfully</td>
+                  <td className="px-4 py-3 font-mono text-primary text-[13px]">{`{ recorded: true, duplicate: false, control: { allow_next: true } }`}</td>
+                  <td className="px-4 py-3 text-ink2">Run recorded; the next guarded request may be evaluated</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-3 font-mono text-primary text-[13px]">{`{ ok: false, reason: 'paused' }`}</td>
-                  <td className="px-4 py-3 text-ink2">Flow was manually paused</td>
+                  <td className="px-4 py-3 font-mono text-primary text-[13px]">{`{ recorded: true, control: { allow_next: false, reason: 'paused' } }`}</td>
+                  <td className="px-4 py-3 text-ink2">Telemetry recorded; new guarded calls are paused</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-3 font-mono text-primary text-[13px]">{`{ ok: false, reason: 'budget_exceeded' }`}</td>
-                  <td className="px-4 py-3 text-ink2">Monthly budget limit reached</td>
+                  <td className="px-4 py-3 font-mono text-primary text-[13px]">{`{ recorded: true, control: { allow_next: false, reason: 'budget_exceeded' } }`}</td>
+                  <td className="px-4 py-3 text-ink2">Telemetry recorded; monthly budget limit reached</td>
                 </tr>
               </tbody>
             </table>

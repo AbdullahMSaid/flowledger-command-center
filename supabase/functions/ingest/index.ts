@@ -1,167 +1,78 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticateFlowRequest, corsHeaders, json } from "../_shared/auth.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SOURCES = ["live", "monitor", "guarded"];
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
     const url = new URL(req.url);
-    const pathParts = url.pathname.split("/");
+    const pathParts = url.pathname.split("/").filter(Boolean);
     const flowId = pathParts[pathParts.length - 1];
-
-    if (!flowId) {
-      return new Response(JSON.stringify({ error: "Missing flowId in path" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    if (!flowId || !UUID_RE.test(flowId)) return json({ error: "Invalid flowId" }, 400);
+    const { userId, isFlowCredential, error: authError } = await authenticateFlowRequest(req, flowId);
+    if (!userId) return json({ error: authError || "Unauthorized" }, 401);
 
     const body = await req.json();
-    const { status, duration_ms, token_count, cost_usd, error_message } = body;
-
-    if (!status || !["success", "error"].includes(status)) {
-      return new Response(JSON.stringify({ error: "Invalid status. Must be 'success' or 'error'" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const { event_id, status, duration_ms, token_count, cost_usd, error_message, source = "live" } = body;
+    if (typeof event_id !== "string" || event_id.length < 1 || event_id.length > 160) {
+      return json({ error: "event_id is required and must be 1–160 characters" }, 400);
     }
-
-    if (typeof duration_ms !== "number" || typeof token_count !== "number" || typeof cost_usd !== "number") {
-      return new Response(JSON.stringify({ error: "duration_ms, token_count, and cost_usd must be numbers" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!(typeof status === "string" && ["success", "error"].includes(status))) {
+      return json({ error: "Invalid status. Must be 'success' or 'error'" }, 400);
     }
+    if (!Number.isInteger(duration_ms) || duration_ms < 0 || !Number.isInteger(token_count) || token_count < 0 ||
+        typeof cost_usd !== "number" || !Number.isFinite(cost_usd) || cost_usd < 0) {
+      return json({ error: "duration_ms and token_count must be nonnegative integers; cost_usd must be finite and nonnegative" }, 400);
+    }
+    if (error_message !== undefined && error_message !== null && (typeof error_message !== "string" || error_message.length > 2000)) {
+      return json({ error: "error_message must be at most 2000 characters" }, 400);
+    }
+    if (typeof source !== "string" || !SOURCES.includes(source)) return json({ error: "Invalid telemetry source" }, 400);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
-
-    // Fetch the flow with enabled, budget, and owner info
     const { data: flow, error: flowError } = await supabase
       .from("flows")
-      .select("id, flow_enabled, budget_limit, user_id, name")
+      .select("id, user_id, workspace_id")
       .eq("id", flowId)
       .single();
-
-    if (flowError || !flow) {
-      return new Response(JSON.stringify({ error: "Flow not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (flowError || !flow) return json({ error: "Flow not found" }, 404);
+    if (flow.user_id !== userId && !isFlowCredential) {
+      const { data: membership } = await supabase.from("workspace_members").select("role").eq("workspace_id", flow.workspace_id).eq("user_id", userId).maybeSingle();
+      if (membership?.role !== "admin") return json({ error: "You do not have access to this flow" }, 403);
+    } else if (flow.user_id !== userId) {
+      return json({ error: "You do not have access to this flow" }, 403);
     }
 
-    // Check if flow is paused
-    if (!flow.flow_enabled) {
-      return new Response(JSON.stringify({ ok: false, reason: "paused" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const { data: result, error: recordError } = await supabase.rpc("record_ingest_run", {
+      p_flow_id: flowId,
+      p_event_id: event_id,
+      p_status: status,
+      p_duration_ms: duration_ms,
+      p_token_count: token_count,
+      p_cost_usd: cost_usd,
+      p_error_message: error_message ?? null,
+      p_source: source,
+    }).single();
+
+    if (recordError) {
+      const statusCode = recordError.code === "22023" ? 400 : recordError.code === "P0002" ? 404 : recordError.code === "23505" ? 409 : 500;
+      return json({ error: statusCode === 500 ? "Unable to record telemetry" : recordError.message }, statusCode);
     }
 
-    // Check budget limit
-    if (flow.budget_limit !== null) {
-      const monthStart = new Date();
-      monthStart.setDate(1);
-      monthStart.setHours(0, 0, 0, 0);
-
-      const { data: monthRuns } = await supabase
-        .from("runs")
-        .select("cost_usd")
-        .eq("flow_id", flowId)
-        .gte("created_at", monthStart.toISOString());
-
-      const monthlySpend = (monthRuns || []).reduce((sum: number, r: { cost_usd: number }) => sum + Number(r.cost_usd), 0);
-
-      if (monthlySpend + cost_usd > flow.budget_limit) {
-        // Auto-pause the flow
-        await supabase
-          .from("flows")
-          .update({ flow_enabled: false })
-          .eq("id", flowId);
-
-        // Find matching budget_exceeded alert rules for this flow
-        const { data: matchingRules } = await supabase
-          .from("alert_rules")
-          .select("id, name")
-          .eq("user_id", flow.user_id)
-          .eq("condition_type", "budget_exceeded")
-          .eq("enabled", true);
-
-        if (matchingRules && matchingRules.length > 0) {
-          const alertInserts = matchingRules
-            .filter((rule: { id: string; name: string }) => true) // all budget_exceeded rules apply
-            .map((rule: { id: string; name: string }) => ({
-              user_id: flow.user_id,
-              rule_id: rule.id,
-              rule_name: rule.name,
-              condition_type: "budget_exceeded",
-              flow_id: flowId,
-              flow_name: flow.name,
-              status: "triggered",
-            }));
-
-          await supabase.from("alert_history").insert(alertInserts);
-        }
-
-        return new Response(JSON.stringify({ ok: false, reason: "budget_exceeded" }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
-
-    // Insert the run
-    const { data: run, error: insertError } = await supabase
-      .from("runs")
-      .insert({
-        flow_id: flowId,
-        status,
-        duration_ms,
-        token_count,
-        cost_usd,
-        error_message: error_message || null,
-      })
-      .select("id")
-      .single();
-
-    if (insertError) {
-      return new Response(JSON.stringify({ error: insertError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(JSON.stringify({ ok: true, run_id: run.id }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return json({
+      recorded: result.recorded,
+      run_id: result.run_id,
+      duplicate: result.duplicate,
+      control: { allow_next: result.control_allow_next, reason: result.control_reason },
     });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: "Invalid request body" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  } catch {
+    return json({ error: "Invalid request body" }, 400);
   }
 });

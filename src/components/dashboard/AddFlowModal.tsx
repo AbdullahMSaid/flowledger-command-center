@@ -1,145 +1,27 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
+import { Check, ChevronDown, Copy, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-const errorMessages = [
-  "Timeout after 30s",
-  "Rate limit exceeded",
-  "Context length exceeded",
-];
+const platforms = ["Zapier", "n8n", "Make", "LangChain", "Claude Code", "Custom"];
 
-async function seedRuns(flowId: string) {
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ingest/${flowId}`;
-  const headers = {
-    Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-    "Content-Type": "application/json",
+export default function AddFlowModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [name, setName] = useState(""); const [platform, setPlatform] = useState("Zapier"); const [model, setModel] = useState("");
+  const [description, setDescription] = useState(""); const [businessPurpose, setBusinessPurpose] = useState(""); const [teamLabel, setTeamLabel] = useState("");
+  const [more, setMore] = useState(false); const [loading, setLoading] = useState(false); const [error, setError] = useState(""); const [createdId, setCreatedId] = useState<string | null>(null); const [copied, setCopied] = useState(false);
+  const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL || "https://your-project.supabase.co"}/functions/v1/ingest/${createdId ?? "FLOW_ID"}`;
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault(); setLoading(true); setError("");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setError("Your session has expired. Sign in again."); setLoading(false); return; }
+    const { data: membership, error: membershipError } = await supabase.from("workspace_members").select("workspace_id").eq("user_id", user.id).limit(1).maybeSingle();
+    if (membershipError || !membership) { setError(membershipError?.message ?? "No workspace is available for this account."); setLoading(false); return; }
+    const { data, error: insertError } = await supabase.from("flows").insert({ name: name.trim(), platform, model: model.trim(), user_id: user.id, created_by: user.id, workspace_id: membership.workspace_id, description: description.trim() || null, business_purpose: businessPurpose.trim() || null, team_label: teamLabel.trim() || null, environment: "experiment", approval_status: "pending", protection_mode: "monitor_only", flow_enabled: true, control_state: "running" }).select("id").single();
+    if (insertError || !data) setError(insertError?.message ?? "The flow could not be created."); else setCreatedId(data.id);
+    setLoading(false);
   };
-  const promises = Array.from({ length: 3 }, () => {
-    const isError = Math.random() < 0.2;
-    return fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        status: isError ? "error" : "success",
-        cost_usd: Number((Math.random() * 0.078 + 0.002).toFixed(4)),
-        duration_ms: Math.floor(Math.random() * 4400 + 600),
-        token_count: Math.floor(Math.random() * 3800 + 200),
-        error_message: isError
-          ? errorMessages[Math.floor(Math.random() * errorMessages.length)]
-          : null,
-      }),
-    }).catch(() => null);
-  });
-  await Promise.all(promises);
+  const finish = () => onCreated();
+  const copy = async () => { await navigator.clipboard.writeText(webhookUrl); setCopied(true); window.setTimeout(() => setCopied(false), 1500); };
+
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/35 p-4" role="dialog" aria-modal="true" aria-labelledby="add-flow-title"><div className="w-full max-w-[440px] rounded-xl border border-slate-200 bg-white p-5 shadow-xl"><div className="flex items-start justify-between gap-4"><div><h2 id="add-flow-title" className="text-lg font-semibold tracking-[-0.02em]">{createdId ? "Connect a provider" : "Add flow"}</h2><p className="mt-1 text-xs leading-5 text-slate-500">{createdId ? "The workflow is registered. Connect its provider before FlowLedger can track activity." : "Start with the essentials. You’ll connect its provider next."}</p></div><button type="button" onClick={createdId ? finish : onClose} aria-label="Close" className="rounded p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>{createdId ? <div className="mt-5"><div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-medium text-emerald-800"><Check className="h-4 w-4" />{name} is registered.</div><div className="mt-4"><div className="text-[10px] font-semibold uppercase tracking-[.12em] text-slate-400">Connection endpoint</div><div className="mt-2 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5"><code className="min-w-0 flex-1 break-all text-[11px] text-slate-700">{webhookUrl}</code><button onClick={copy} className="rounded p-1.5 text-slate-500 hover:bg-white" aria-label="Copy endpoint"><Copy className="h-3.5 w-3.5" /></button></div><p className="mt-2 text-[11px] leading-5 text-slate-500">{copied ? "Copied." : `Connect ${platform}, create a scoped credential, then send authenticated activity. Spend and budgets remain empty until activity arrives.`}</p></div><div className="mt-5 flex gap-2"><a href="/setup" className="inline-flex h-9 flex-1 items-center justify-center rounded-md border border-slate-300 text-xs font-semibold text-slate-700">Open connector setup</a><button onClick={finish} className="h-9 flex-1 rounded-md bg-blue-600 text-xs font-semibold text-white">Done</button></div></div> : <form onSubmit={submit} className="mt-5 space-y-4"><label className="block text-xs font-medium text-slate-700">Name<input autoFocus required value={name} onChange={e => setName(e.target.value)} placeholder="Customer support triage" className="mt-1.5 h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /></label><label className="block text-xs font-medium text-slate-700">Platform<select value={platform} onChange={e => setPlatform(e.target.value)} className="mt-1.5 h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm">{platforms.map(item => <option key={item}>{item}</option>)}</select></label><label className="block text-xs font-medium text-slate-700">Model<input required value={model} onChange={e => setModel(e.target.value)} placeholder="gpt-4o" className="mt-1.5 h-10 w-full rounded-md border border-slate-300 px-3 text-sm" /></label><button type="button" onClick={() => setMore(value => !value)} className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600">More options <ChevronDown className={`h-3.5 w-3.5 transition-transform ${more ? "rotate-180" : ""}`} /></button>{more ? <div className="space-y-3 rounded-lg bg-slate-50 p-3"><label className="block text-xs font-medium text-slate-600">Description<input value={description} onChange={e => setDescription(e.target.value)} className="mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-sm" /></label><label className="block text-xs font-medium text-slate-600">Business purpose<textarea value={businessPurpose} onChange={e => setBusinessPurpose(e.target.value)} rows={2} className="mt-1 w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-sm" /></label><label className="block text-xs font-medium text-slate-600">Team<input value={teamLabel} onChange={e => setTeamLabel(e.target.value)} className="mt-1 h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 text-sm" /></label></div> : null}{error ? <p className="text-xs text-red-700" role="alert">{error}</p> : null}<div className="flex gap-2 pt-1"><button type="button" onClick={onClose} className="h-9 flex-1 rounded-md border border-slate-300 text-xs font-semibold text-slate-700">Cancel</button><button type="submit" disabled={loading} className="h-9 flex-1 rounded-md bg-blue-600 text-xs font-semibold text-white disabled:opacity-50">{loading ? "Creating…" : "Create flow"}</button></div></form>}</div></div>;
 }
-
-const platforms = ["Zapier", "n8n", "Make", "LangChain", "Other"];
-
-const AddFlowModal = ({
-  onClose,
-  onCreated,
-}: {
-  onClose: () => void;
-  onCreated: () => void;
-}) => {
-  const [name, setName] = useState("");
-  const [platform, setPlatform] = useState("Zapier");
-  const [model, setModel] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setError("Not authenticated");
-      setLoading(false);
-      return;
-    }
-
-    const { data: newFlow, error: insertError } = await supabase
-      .from("flows")
-      .insert({ name, platform, model, user_id: user.id })
-      .select("id")
-      .single();
-
-    if (insertError || !newFlow) {
-      setError(insertError?.message ?? "Failed to create flow");
-      setLoading(false);
-    } else {
-      await seedRuns(newFlow.id);
-      onCreated();
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-foreground/50" onClick={onClose} />
-      <div className="relative bg-card border border-border rounded-2xl p-8 w-full max-w-[440px] shadow-lg">
-        <h2 className="font-display text-2xl tracking-tight mb-6">Add flow</h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="text-sm text-ink2 mb-1 block">Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-card text-foreground focus:outline-none focus:border-primary"
-              placeholder="e.g. Customer support triage"
-            />
-          </div>
-          <div>
-            <label className="text-sm text-ink2 mb-1 block">Platform</label>
-            <select
-              value={platform}
-              onChange={(e) => setPlatform(e.target.value)}
-              className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-card text-foreground focus:outline-none focus:border-primary"
-            >
-              {platforms.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-sm text-ink2 mb-1 block">Model</label>
-            <input
-              type="text"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              required
-              className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-card text-foreground focus:outline-none focus:border-primary"
-              placeholder="e.g. gpt-4o"
-            />
-          </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <div className="flex gap-3 mt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 border border-border py-2.5 rounded-lg text-sm text-foreground hover:border-ink3 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-primary text-primary-foreground py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              {loading ? "Creating..." : "Create flow"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-export default AddFlowModal;

@@ -8,10 +8,10 @@ const EmailCapture = () => {
     <section className="bg-card border-t border-border">
       <div className="container max-w-[800px] py-24 text-center">
         <h2 className="font-display text-5xl leading-[1.1] tracking-tight mb-4">
-          Ready to see what's running in your org?
+          Ready to inspect the failure mode?
         </h2>
         <p className="text-base text-ink2 font-light mb-9">
-          Join 300+ teams who've connected FlowLedger and discovered AI workflows they didn't know existed.
+          Run the deterministic demo, then configure the existing Supabase workspace when you are ready to test authenticated data.
         </p>
         <form
           onSubmit={(e) => e.preventDefault()}
@@ -28,7 +28,7 @@ const EmailCapture = () => {
             to="/signup"
             className="bg-primary text-primary-foreground px-7 py-3.5 rounded-lg text-[15px] font-medium tracking-tight hover:translate-y-[-1px] hover:shadow-[0_8px_24px_rgba(26,75,255,0.3)] transition-all"
           >
-            Request early access →
+            Explore the sample →
           </Link>
         </form>
       </div>

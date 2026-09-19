@@ -59,6 +59,12 @@
   }
 }
 
+@media (max-width: 639px) {
+  #operations-flows > .overflow-x-auto {
+    display: none;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;

@@ -5,18 +5,28 @@ type SetBudgetModalProps = {
   flowId: string;
   flowName: string;
   currentBudget: number | null;
+  currentDailyBudget: number | null;
+  currentProtectionMode: string;
   onClose: () => void;
   onSaved: () => void;
 };
 
-const SetBudgetModal = ({ flowId, flowName, currentBudget, onClose, onSaved }: SetBudgetModalProps) => {
+const SetBudgetModal = ({ flowId, flowName, currentBudget, currentDailyBudget, currentProtectionMode, onClose, onSaved }: SetBudgetModalProps) => {
   const [budget, setBudget] = useState(currentBudget !== null ? String(currentBudget) : "");
+  const [dailyBudget, setDailyBudget] = useState(currentDailyBudget !== null ? String(currentDailyBudget) : "");
+  const [protectionMode, setProtectionMode] = useState(currentProtectionMode || "Monitor only");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const removeBudget = async () => {
     setLoading(true);
-    const { error: updateError } = await supabase.from("flows").update({ budget_limit: null }).eq("id", flowId);
+    const { error: updateError } = await supabase.rpc("set_flow_policy", {
+      p_flow_id: flowId,
+      p_budget_limit: null,
+      p_daily_budget_limit: null,
+      p_protection_mode: protectionMode,
+      p_reason: "Removed budget policy from operations dashboard",
+    });
     if (updateError) { setError(updateError.message); setLoading(false); }
     else onSaved();
   };
@@ -27,17 +37,21 @@ const SetBudgetModal = ({ flowId, flowName, currentBudget, onClose, onSaved }: S
     setLoading(true);
 
     const budgetValue = budget.trim() === "" ? null : parseFloat(budget);
+    const dailyBudgetValue = dailyBudget.trim() === "" ? null : parseFloat(dailyBudget);
 
-    if (budgetValue !== null && (isNaN(budgetValue) || budgetValue <= 0)) {
-      setError("Enter a valid positive number or leave empty to remove.");
+    if ((budgetValue !== null && (isNaN(budgetValue) || budgetValue < 0)) || (dailyBudgetValue !== null && (isNaN(dailyBudgetValue) || dailyBudgetValue < 0))) {
+      setError("Enter valid nonnegative numbers or leave empty to remove.");
       setLoading(false);
       return;
     }
 
-    const { error: updateError } = await supabase
-      .from("flows")
-      .update({ budget_limit: budgetValue })
-      .eq("id", flowId);
+    const { error: updateError } = await supabase.rpc("set_flow_policy", {
+      p_flow_id: flowId,
+      p_budget_limit: budgetValue,
+      p_daily_budget_limit: dailyBudgetValue,
+      p_protection_mode: protectionMode,
+      p_reason: "Updated budget policy from operations dashboard",
+    });
 
     if (updateError) {
       setError(updateError.message);
@@ -68,6 +82,29 @@ const SetBudgetModal = ({ flowId, flowName, currentBudget, onClose, onSaved }: S
               className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-card text-foreground focus:outline-none focus:border-primary"
               placeholder="e.g. 5.00 — leave empty to remove"
             />
+          </div>
+          <div>
+            <label className="text-sm text-muted-foreground mb-1 block">Daily limit (USD / UTC day)</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={dailyBudget}
+              onChange={(e) => setDailyBudget(e.target.value)}
+              className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-card text-foreground focus:outline-none focus:border-primary"
+              placeholder="Optional daily admission cap"
+            />
+          </div>
+          <div>
+            <label className="text-sm text-muted-foreground mb-1 block">Protection mode</label>
+            <select
+              value={protectionMode}
+              onChange={(e) => setProtectionMode(e.target.value)}
+              className="w-full border border-border rounded-lg px-4 py-3 text-sm bg-card text-foreground focus:outline-none focus:border-primary"
+            >
+              <option>Monitor only</option>
+              <option>Guard connected</option>
+            </select>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex items-center gap-3">

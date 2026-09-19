@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { useState } from "react";
 
 const flows = [
   { name: "Customer support triage", meta: "GPT-4o · Zapier · Last run 2m ago", status: "Live", statusClass: "bg-[#E6FBF4] text-[#0A7A57]" },
@@ -17,24 +16,23 @@ const Hero = () => {
             <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
               <div className="w-2 h-2 rounded-full bg-white" />
             </div>
-            <span className="text-xs text-primary font-medium">Now in public beta</span>
+            <span className="text-xs text-primary font-medium">Interactive product prototype</span>
           </div>
           <div className="text-xs font-medium tracking-[2px] uppercase text-electric-blue mb-5">
-            AI Operations Platform
+            Workflow cost control
           </div>
           <h1 className="font-display text-[58px] leading-[1.08] tracking-tight mb-6">
-            Stop your AI from <em className="text-primary">burning money.</em>
+            Know what your AI workflows <em className="text-primary">cost.</em>
           </h1>
           <p className="text-[17px] text-ink2 leading-[1.7] font-light mb-9 max-w-lg">
-            Set budget limits, pause runaway workflows, and see exactly where every dollar goes — in real time.
+            See what each workflow costs, who owns it, and where it needs attention. Set limits on connected workflows.
           </p>
           <div className="flex items-center gap-3 flex-wrap">
-            <Link to="/signup" className="bg-primary text-primary-foreground px-7 py-3.5 rounded-lg text-[15px] font-medium tracking-tight hover:translate-y-[-1px] hover:shadow-[0_8px_24px_rgba(26,75,255,0.3)] transition-all">
-              Get early access
+            <Link to="/demo" className="bg-primary text-primary-foreground px-7 py-3.5 rounded-lg text-[15px] font-medium tracking-tight hover:translate-y-[-1px] hover:shadow-[0_8px_24px_rgba(26,75,255,0.3)] transition-all">
+              Explore the sample workspace
             </Link>
-            <Link to="/docs" className="border border-border bg-card text-foreground px-7 py-3.5 rounded-lg text-[15px] hover:border-ink3 transition-colors inline-flex items-center gap-2">
-              View Demo
-              <span className="text-[10px] uppercase tracking-wider text-primary font-medium bg-primary/10 px-2 py-0.5 rounded-full">Coming soon</span>
+            <Link to="/demo/replay?mode=demo" className="border border-border bg-card text-foreground px-7 py-3.5 rounded-lg text-[15px] hover:border-ink3 transition-colors inline-flex items-center gap-2">
+              See an example issue
             </Link>
           </div>
         </div>
@@ -45,7 +43,7 @@ const Hero = () => {
             <div className="w-2.5 h-2.5 rounded-full bg-[#FF5F5F]" />
             <div className="w-2.5 h-2.5 rounded-full bg-[#FFBE2E]" />
             <div className="w-2.5 h-2.5 rounded-full bg-[#2ACF60]" />
-            <span className="text-xs text-ink3 ml-2">FlowLedger — Workspace Overview</span>
+            <span className="text-xs text-ink3 ml-2">FlowLedger — Illustrative workspace view</span>
           </div>
           <div className="p-5">
             <div className="grid grid-cols-3 gap-2.5 mb-4">

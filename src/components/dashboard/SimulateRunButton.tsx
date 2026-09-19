@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const errorMessages = [
   "Timeout after 30s",
@@ -13,6 +14,13 @@ const SimulateRunButton = ({ flowId, onSuccess }: { flowId: string; onSuccess?: 
   const simulate = async () => {
     setState("sending");
 
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setState("failed");
+      setTimeout(() => setState("idle"), 3000);
+      return;
+    }
+
     const isError = Math.random() < 0.2;
     const payload = {
       status: isError ? "error" : "success",
@@ -25,17 +33,20 @@ const SimulateRunButton = ({ flowId, onSuccess }: { flowId: string; onSuccess?: 
     };
 
     try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ingest/${flowId}`;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) throw new Error("Supabase is not configured");
+      const url = `${supabaseUrl}/functions/v1/ingest/${flowId}`;
       const res = await fetch(url, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, event_id: crypto.randomUUID(), source: "live" }),
       });
 
-      if (!res.ok) throw new Error("Failed");
+      const result = await res.json().catch(() => null);
+      if (!res.ok || result?.error) throw new Error(result?.error ?? "Failed to record run");
       setState("idle");
       onSuccess?.();
     } catch {

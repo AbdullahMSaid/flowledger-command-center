@@ -1,510 +1,85 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
+import AppShell from "@/components/app/AppShell";
+import OperationsDashboard, { type OperationsFlow } from "@/components/dashboard/OperationsDashboard";
 import AddFlowModal from "@/components/dashboard/AddFlowModal";
-import SetBudgetModal from "@/components/dashboard/SetBudgetModal";
-import SimulateRunButton from "@/components/dashboard/SimulateRunButton";
-import BulkSimulateButton from "@/components/dashboard/BulkSimulateButton";
-import SpendChart from "@/components/dashboard/SpendChart";
-import { formatDistanceToNow } from "date-fns";
-import { Pause, Play, DollarSign, Bell, BarChart3, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import RenameFlowModal from "@/components/dashboard/RenameFlowModal";
-import DeleteFlowModal from "@/components/dashboard/DeleteFlowModal";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
-type FlowWithStats = {
-  id: string;
-  name: string;
-  platform: string;
-  model: string;
-  status: "Live" | "Degraded" | "Error" | "Paused";
-  lastRun: string | null;
-  runsToday: number;
-  costToday: number;
-  flow_enabled: boolean;
-  budget_limit: number | null;
-  monthlySpend: number;
-};
+type InventoryRow = Database["public"]["Functions"]["get_workspace_inventory"]["Returns"][number];
+type Summary = { spend_usd?: number; run_count?: number; active_workflow_count?: number; open_incident_count?: number; over_budget_count?: number };
 
-function computeStatus(runs: { status: string }[], enabled: boolean): "Live" | "Degraded" | "Error" | "Paused" {
-  if (!enabled) return "Paused";
-  if (runs.length === 0) return "Live";
-  if (runs[0].status === "error") return "Error";
-  const errorRate = runs.filter((r) => r.status === "error").length / runs.length;
-  if (errorRate > 0.2) return "Degraded";
+const startUtcDaysAgo = (days: number) => { const now = new Date(); return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - days + 1)); };
+const statusFor = (flow: Database["public"]["Tables"]["flows"]["Row"], inventory?: InventoryRow) => {
+  if (flow.archived_at) return "Archived";
+  if (flow.control_state === "emergency_stopped") return "Emergency stopped";
+  if (!flow.flow_enabled || flow.control_state === "paused") return "Paused";
+  if (!inventory?.last_run_at) return "No data";
   return "Live";
-}
-
-const statusStyles: Record<string, string> = {
-  Live: "bg-[hsl(160,60%,95%)] text-[hsl(160,80%,28%)]",
-  Degraded: "bg-[hsl(40,100%,93%)] text-[hsl(40,80%,30%)]",
-  Error: "bg-[hsl(0,80%,95%)] text-[hsl(0,50%,40%)]",
-  Paused: "bg-secondary text-muted-foreground",
 };
 
-const Dashboard = () => {
+export default function Dashboard() {
   const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
-  const [flows, setFlows] = useState<FlowWithStats[]>([]);
-  const [runsToday, setRunsToday] = useState(0);
-  const [spendToday, setSpendToday] = useState(0);
+  const [flows, setFlows] = useState<OperationsFlow[]>([]);
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [chartData, setChartData] = useState<{ label: string; cost: number }[]>([]);
+  const [workspaceLabel, setWorkspaceLabel] = useState("My workspace");
   const [showAddFlow, setShowAddFlow] = useState(false);
-  const [budgetFlow, setBudgetFlow] = useState<FlowWithStats | null>(null);
-  const [renameFlow, setRenameFlow] = useState<FlowWithStats | null>(null);
-  const [deleteFlow, setDeleteFlow] = useState<FlowWithStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const fetchDataRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  const [error, setError] = useState<string | null>(null);
+  const fetchRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   const fetchData = useCallback(async () => {
     if (!user) return;
-
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-
-    const { data: flowsData } = await supabase
-      .from("flows")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (!flowsData || flowsData.length === 0) {
-      setFlows([]);
-      setRunsToday(0);
-      setSpendToday(0);
-      setLoading(false);
+    setError(null);
+    const start = startUtcDaysAgo(7);
+    const end = new Date();
+    const membershipResponse = await supabase.from("workspace_members").select("workspace_id, workspaces(name)").eq("user_id", user.id).limit(1).maybeSingle();
+    if (membershipResponse.error || !membershipResponse.data?.workspace_id) {
+      setFlows([]); setSummary(null); setChartData([]); setLoading(false);
+      setError(membershipResponse.error?.message ?? "No workspace membership is available for this account.");
       return;
     }
-
-    const flowIds = flowsData.map((f) => f.id);
-
-    const [enriched, { data: allTodayRuns }] = await Promise.all([
-      Promise.all(
-        flowsData.map(async (flow) => {
-          const [{ data: last10 }, { data: todayRuns }, { data: monthRuns }] = await Promise.all([
-            supabase.from("runs").select("status, created_at").eq("flow_id", flow.id).order("created_at", { ascending: false }).limit(10),
-            supabase.from("runs").select("cost_usd, created_at").eq("flow_id", flow.id).gte("created_at", todayStart.toISOString()),
-            supabase.from("runs").select("cost_usd").eq("flow_id", flow.id).gte("created_at", monthStart.toISOString()),
-          ]);
-
-          const status = computeStatus(last10 || [], flow.flow_enabled);
-          const lastRunTime = last10?.[0]?.created_at || null;
-          const monthlySpend = (monthRuns || []).reduce((sum, r) => sum + Number(r.cost_usd), 0);
-
-          return {
-            id: flow.id,
-            name: flow.name,
-            platform: flow.platform,
-            model: flow.model,
-            status,
-            lastRun: lastRunTime,
-            runsToday: todayRuns?.length || 0,
-            costToday: todayRuns?.reduce((sum, r) => sum + Number(r.cost_usd), 0) || 0,
-            flow_enabled: flow.flow_enabled,
-            budget_limit: flow.budget_limit,
-            monthlySpend,
-          };
-        })
-      ),
-      supabase.from("runs").select("cost_usd, flow_id").in("flow_id", flowIds).gte("created_at", todayStart.toISOString()),
+    const workspaceId = membershipResponse.data.workspace_id;
+    const workspace = membershipResponse.data.workspaces as { name?: string } | null;
+    if (workspace?.name) setWorkspaceLabel(workspace.name);
+    const [flowsResponse, inventoryResponse, summaryResponse] = await Promise.all([
+      supabase.from("flows").select("*").eq("workspace_id", workspaceId).is("archived_at", null).order("created_at", { ascending: false }),
+      supabase.rpc("get_workspace_inventory", { p_workspace_id: workspaceId, p_period_start: start.toISOString(), p_period_end: end.toISOString(), p_limit: 200, p_offset: 0 }),
+      supabase.rpc("get_workspace_summary", { p_workspace_id: workspaceId, p_period_start: start.toISOString(), p_period_end: end.toISOString() }),
     ]);
-
-    setFlows(enriched);
-    setRunsToday((allTodayRuns || []).length);
-    setSpendToday((allTodayRuns || []).reduce((sum, r) => sum + Number(r.cost_usd), 0));
+    if (flowsResponse.error || inventoryResponse.error || summaryResponse.error) {
+      setFlows([]); setSummary(null); setChartData([]); setLoading(false);
+      setError(flowsResponse.error?.message ?? inventoryResponse.error?.message ?? summaryResponse.error?.message ?? "Unknown workspace error");
+      return;
+    }
+    const inventory = new Map((inventoryResponse.data ?? []).map(row => [row.flow_id, row as InventoryRow]));
+    const sourceFlows = flowsResponse.data ?? [];
+    setFlows(sourceFlows.map(flow => {
+      const row = inventory.get(flow.id);
+      return { id: flow.id, name: flow.name, owner: flow.accountable_owner_member_id ? "Assigned member" : "Unassigned", team: flow.team_label ?? undefined, platform: flow.platform, model: flow.model || "Unknown", status: statusFor(flow, row), spend: row ? Number(row.period_cost_usd) : null, budget: flow.budget_limit === null ? null : Number(flow.budget_limit), protection: flow.protection_mode === "guard_connected" ? "Guard connected" : "Monitor only", lastRun: row?.last_run_at ?? undefined };
+    }));
+    setSummary(summaryResponse.data as Summary);
+    const flowIds = sourceFlows.map(flow => flow.id);
+    if (flowIds.length === 0) setChartData([]);
+    else {
+      const runResponse = await supabase.from("runs").select("cost_usd, created_at, source").in("flow_id", flowIds).gte("created_at", start.toISOString()).not("source", "in", "(synthetic_demo,synthetic_seed)").order("created_at", { ascending: true });
+      if (runResponse.error) setChartData([]);
+      else {
+        const days = Array.from({ length: 7 }, (_, index) => { const d = new Date(start); d.setUTCDate(d.getUTCDate() + index); return d; });
+        setChartData(days.map(day => ({ label: new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" }).format(day), cost: (runResponse.data ?? []).filter(run => new Date(run.created_at).toISOString().slice(0, 10) === day.toISOString().slice(0, 10)).reduce((total, run) => total + Number(run.cost_usd), 0) })));
+      }
+    }
     setLoading(false);
   }, [user]);
 
-  useEffect(() => { fetchDataRef.current = fetchData; }, [fetchData]);
+  useEffect(() => { fetchRef.current = fetchData; }, [fetchData]);
+  useEffect(() => { void fetchData(); }, [fetchData]);
+  useEffect(() => { if (!user) return; const channel = supabase.channel("dashboard-runs").on("postgres_changes", { event: "INSERT", schema: "public", table: "runs" }, () => void fetchRef.current()).subscribe(); return () => { void supabase.removeChannel(channel); }; }, [user]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel("runs-realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "runs" }, () => fetchDataRef.current())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [user]);
-
-  const toggleFlowEnabled = async (flowId: string, currentEnabled: boolean, e: React.MouseEvent) => {
-    e.stopPropagation();
-    await supabase.from("flows").update({ flow_enabled: !currentEnabled }).eq("id", flowId);
-    fetchData();
-  };
-
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <nav className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-8 py-4 border-b border-border bg-background/95 backdrop-blur-sm">
-          <span className="font-display text-[22px] tracking-tight">Flow<span className="text-primary">Ledger</span></span>
-        </nav>
-        <div className="max-w-[1100px] mx-auto px-4 sm:px-8 py-6 sm:py-10">
-          <div className="h-8 w-36 bg-muted rounded animate-pulse mb-8" />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="border border-border rounded-xl px-5 py-4 bg-card">
-                <div className="h-3 w-24 bg-muted rounded animate-pulse mb-3" />
-                <div className="h-7 w-16 bg-muted rounded animate-pulse" />
-              </div>
-            ))}
-          </div>
-          <div className="border border-border rounded-xl bg-card overflow-hidden">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="px-5 py-4 border-b border-border last:border-0 flex items-center gap-6">
-                <div className="h-4 w-4 bg-muted rounded animate-pulse" />
-                <div className="h-4 w-40 bg-muted rounded animate-pulse" />
-                <div className="h-4 w-24 bg-muted rounded animate-pulse" />
-                <div className="h-5 w-14 bg-muted rounded-full animate-pulse" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-8 py-4 border-b border-border bg-background/95 backdrop-blur-sm">
-        <Link to="/" className="font-display text-[22px] tracking-tight">
-          Flow<span className="text-primary">Ledger</span>
-        </Link>
-        <div className="flex items-center gap-2 sm:gap-4">
-          <Link to="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Docs</Link>
-          <Link to="/setup" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Setup Guide</Link>
-          <span className="text-sm text-muted-foreground hidden sm:inline">{user?.email}</span>
-          <button onClick={signOut} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Sign out
-          </button>
-        </div>
-      </nav>
-
-      <div className="max-w-[1100px] mx-auto px-4 sm:px-8 py-6 sm:py-10">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
-          <h1 className="font-display text-2xl sm:text-3xl tracking-tight">Dashboard</h1>
-          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-            <button
-              onClick={() => navigate("/analytics")}
-              className="border border-border px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
-            >
-              <BarChart3 size={15} />
-              <span className="hidden sm:inline">Analytics</span>
-            </button>
-            <button
-              onClick={() => navigate("/alerts")}
-              className="border border-border px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center gap-2"
-            >
-              <Bell size={15} />
-              <span className="hidden sm:inline">Alerts</span>
-            </button>
-            <BulkSimulateButton flowIds={flows.filter((f) => f.flow_enabled).map((f) => f.id)} onSuccess={fetchData} />
-            <button
-              onClick={() => setShowAddFlow(true)}
-              className="bg-primary text-primary-foreground px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg text-sm font-medium tracking-tight hover:opacity-90 transition-opacity"
-            >
-              Add flow
-            </button>
-          </div>
-        </div>
-
-        {/* Metric cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <div className="border border-border rounded-xl px-5 py-4 bg-card">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Active Flows</div>
-            <div className="text-2xl font-display">{flows.filter(f => f.flow_enabled).length}</div>
-          </div>
-          <div className="border border-border rounded-xl px-5 py-4 bg-card">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Runs Today</div>
-            <div className="text-2xl font-display">{runsToday}</div>
-          </div>
-          <div className="border border-border rounded-xl px-5 py-4 bg-card">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Spend Today</div>
-            <div className="text-2xl font-display">${spendToday.toFixed(2)}</div>
-          </div>
-        </div>
-
-        {/* Flows - mobile cards / desktop table */}
-        <div className="border border-border rounded-xl bg-card overflow-hidden mb-6 sm:mb-8">
-          {/* Desktop table */}
-          <div className="hidden md:block">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium w-8"></th>
-                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Name</th>
-                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Platform</th>
-                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Status</th>
-                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Budget</th>
-                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium">Last Run</th>
-                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">Runs Today</th>
-                  <th className="px-5 py-3 text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">Cost Today</th>
-                  <th className="px-5 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {flows.map((flow) => {
-                  const budgetPct = flow.budget_limit ? Math.min((flow.monthlySpend / flow.budget_limit) * 100, 100) : null;
-                  const budgetColor = budgetPct !== null
-                    ? budgetPct >= 90 ? "bg-destructive" : budgetPct >= 70 ? "bg-[hsl(40,90%,50%)]" : "bg-accent"
-                    : "";
-
-                  return (
-                    <tr
-                      key={flow.id}
-                      onClick={() => navigate(`/flows/${flow.id}`)}
-                      className="border-b border-border last:border-0 cursor-pointer hover:bg-muted/30 transition-colors"
-                    >
-                      <td className="pl-5 py-3.5">
-                        <button
-                          onClick={(e) => toggleFlowEnabled(flow.id, flow.flow_enabled, e)}
-                          title={flow.flow_enabled ? "Pause flow" : "Resume flow"}
-                          className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
-                        >
-                          {flow.flow_enabled ? <Pause size={14} /> : <Play size={14} />}
-                        </button>
-                      </td>
-                      <td className="px-5 py-3.5 font-medium text-foreground">{flow.name}</td>
-                      <td className="px-5 py-3.5 text-muted-foreground">{flow.platform}</td>
-                      <td className="px-5 py-3.5">
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusStyles[flow.status]}`}>
-                          {flow.status}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        {flow.budget_limit !== null ? (
-                          <div className="flex flex-col gap-1 min-w-[100px]">
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span>${flow.monthlySpend.toFixed(2)}</span>
-                              <span>${flow.budget_limit.toFixed(2)}</span>
-                            </div>
-                            <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all ${budgetColor}`}
-                                style={{ width: `${budgetPct}%` }}
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setBudgetFlow(flow); }}
-                            className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
-                          >
-                            <DollarSign size={12} />
-                            Set budget
-                          </button>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5 text-muted-foreground">
-                        {flow.lastRun
-                          ? formatDistanceToNow(new Date(flow.lastRun), { addSuffix: true })
-                          : "Never"}
-                      </td>
-                      <td className="px-5 py-3.5 text-right text-muted-foreground">{flow.runsToday}</td>
-                      <td className="px-5 py-3.5 text-right text-muted-foreground">${flow.costToday.toFixed(2)}</td>
-                      <td className="px-5 py-3.5 text-right flex items-center justify-end gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setBudgetFlow(flow); }}
-                          title="Set budget"
-                          className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
-                        >
-                          <DollarSign size={14} />
-                        </button>
-                        <SimulateRunButton flowId={flow.id} onSuccess={fetchData} />
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              onClick={(e) => e.stopPropagation()}
-                              className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
-                              title="More options"
-                            >
-                              <MoreHorizontal size={14} />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-36">
-                            <DropdownMenuItem
-                              onClick={(e) => { e.stopPropagation(); setRenameFlow(flow); }}
-                              className="flex items-center gap-2 cursor-pointer"
-                            >
-                              <Pencil size={13} />
-                              Rename
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => { e.stopPropagation(); setDeleteFlow(flow); }}
-                              className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
-                            >
-                              <Trash2 size={13} />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {flows.length === 0 && (
-                  <tr>
-                    <td colSpan={9} className="px-5 py-8 text-center text-muted-foreground">
-                      No flows yet. Click "Add flow" to get started.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile card list */}
-          <div className="md:hidden divide-y divide-border">
-            {flows.map((flow) => {
-              const budgetPct = flow.budget_limit ? Math.min((flow.monthlySpend / flow.budget_limit) * 100, 100) : null;
-              const budgetColor = budgetPct !== null
-                ? budgetPct >= 90 ? "bg-destructive" : budgetPct >= 70 ? "bg-[hsl(40,90%,50%)]" : "bg-accent"
-                : "";
-
-              return (
-                <div
-                  key={flow.id}
-                  onClick={() => navigate(`/flows/${flow.id}`)}
-                  className="p-4 cursor-pointer active:bg-muted/30 transition-colors"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => toggleFlowEnabled(flow.id, flow.flow_enabled, e)}
-                        className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground"
-                      >
-                        {flow.flow_enabled ? <Pause size={14} /> : <Play size={14} />}
-                      </button>
-                      <span className="font-medium text-foreground text-sm">{flow.name}</span>
-                    </div>
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${statusStyles[flow.status]}`}>
-                      {flow.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
-                    <span>{flow.platform}</span>
-                    <span>·</span>
-                    <span>{flow.lastRun ? formatDistanceToNow(new Date(flow.lastRun), { addSuffix: true }) : "Never"}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-4">
-                      <span className="text-muted-foreground">{flow.runsToday} runs</span>
-                      <span className="text-foreground font-medium">${flow.costToday.toFixed(2)} today</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setBudgetFlow(flow); }}
-                        className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground"
-                      >
-                        <DollarSign size={14} />
-                      </button>
-                      <SimulateRunButton flowId={flow.id} onSuccess={fetchData} />
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            onClick={(e) => e.stopPropagation()}
-                            className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground"
-                          >
-                            <MoreHorizontal size={14} />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-36">
-                          <DropdownMenuItem
-                            onClick={(e) => { e.stopPropagation(); setRenameFlow(flow); }}
-                            className="flex items-center gap-2 cursor-pointer"
-                          >
-                            <Pencil size={13} />
-                            Rename
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={(e) => { e.stopPropagation(); setDeleteFlow(flow); }}
-                            className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
-                          >
-                            <Trash2 size={13} />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                  {flow.budget_limit !== null && (
-                    <div className="mt-2">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                        <span>${flow.monthlySpend.toFixed(2)}</span>
-                        <span>${flow.budget_limit.toFixed(2)}</span>
-                      </div>
-                      <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${budgetColor}`}
-                          style={{ width: `${budgetPct}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            {flows.length === 0 && (
-              <div className="p-6 text-center text-muted-foreground text-sm">
-                No flows yet. Click "Add flow" to get started.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Spend chart */}
-        <SpendChart />
-      </div>
-
-      {showAddFlow && (
-        <AddFlowModal
-          onClose={() => setShowAddFlow(false)}
-          onCreated={() => { setShowAddFlow(false); fetchData(); }}
-        />
-      )}
-
-      {budgetFlow && (
-        <SetBudgetModal
-          flowId={budgetFlow.id}
-          flowName={budgetFlow.name}
-          currentBudget={budgetFlow.budget_limit}
-          onClose={() => setBudgetFlow(null)}
-          onSaved={() => { setBudgetFlow(null); fetchData(); }}
-        />
-      )}
-
-      {renameFlow && (
-        <RenameFlowModal
-          flowId={renameFlow.id}
-          currentName={renameFlow.name}
-          onClose={() => setRenameFlow(null)}
-          onSaved={() => { setRenameFlow(null); fetchData(); }}
-        />
-      )}
-
-      {deleteFlow && (
-        <DeleteFlowModal
-          flowId={deleteFlow.id}
-          flowName={deleteFlow.name}
-          onClose={() => setDeleteFlow(null)}
-          onDeleted={() => { setDeleteFlow(null); fetchData(); }}
-        />
-      )}
-    </div>
-  );
-};
-
-export default Dashboard;
+  if (authLoading || loading) return <div className="min-h-screen bg-[#f7f8fa] p-8"><div className="mx-auto max-w-[1380px] animate-pulse space-y-5"><div className="h-10 rounded bg-slate-200"/><div className="h-28 rounded bg-white"/><div className="h-96 rounded bg-white"/></div></div>;
+  const issues = summary ? Number(summary.open_incident_count ?? 0) + Number(summary.over_budget_count ?? 0) : flows.filter(flow => !["Live", "No data"].includes(flow.status)).length;
+  return <AppShell userLabel={user?.email} workspaceLabel={workspaceLabel} onSignOut={signOut}><OperationsDashboard scopeLabel={workspaceLabel} periodLabel="Last 7 days" spend={summary?.spend_usd === undefined ? null : Number(summary.spend_usd)} activeFlows={Number(summary?.active_workflow_count ?? flows.length)} runCount={summary?.run_count === undefined ? null : Number(summary.run_count)} issueCount={issues} flows={flows} chartData={chartData} onAddFlow={() => setShowAddFlow(true)} onSelectFlow={id => navigate(`/flows/${id}`)} error={error}/>{showAddFlow ? <AddFlowModal onClose={() => setShowAddFlow(false)} onCreated={() => { setShowAddFlow(false); void fetchData(); }} /> : null}</AppShell>;
+}

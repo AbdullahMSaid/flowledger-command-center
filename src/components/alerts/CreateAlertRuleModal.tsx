@@ -6,6 +6,7 @@ type Flow = { id: string; name: string };
 type Props = {
   flows: Flow[];
   userId: string;
+  workspaceId: string;
   onClose: () => void;
   onCreated: () => void;
 };
@@ -17,14 +18,12 @@ const conditionTypes = [
   { value: "token_spike", label: "Token spike (count)" },
 ];
 
-const CreateAlertRuleModal = ({ flows, userId, onClose, onCreated }: Props) => {
+const CreateAlertRuleModal = ({ flows, userId, workspaceId, onClose, onCreated }: Props) => {
   const [name, setName] = useState("");
   const [conditionType, setConditionType] = useState("error_rate");
   const [threshold, setThreshold] = useState("");
   const [scope, setScope] = useState("all");
   const [flowId, setFlowId] = useState("");
-  const [notifyEmail, setNotifyEmail] = useState(true);
-  const [slackUrl, setSlackUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -40,13 +39,14 @@ const CreateAlertRuleModal = ({ flows, userId, onClose, onCreated }: Props) => {
     setLoading(true);
     const { error: insertError } = await supabase.from("alert_rules").insert({
       user_id: userId,
+      workspace_id: workspaceId,
       name: name.trim(),
       condition_type: conditionType,
       threshold: thresholdVal,
       scope,
       flow_id: scope === "specific" ? flowId : null,
-      notify_email: notifyEmail,
-      slack_webhook_url: slackUrl.trim() || null,
+      notify_email: false,
+      slack_webhook_url: null,
     });
 
     if (insertError) {
@@ -128,25 +128,8 @@ const CreateAlertRuleModal = ({ flows, userId, onClose, onCreated }: Props) => {
           )}
 
           <div className="border-t border-border pt-4">
-            <p className="text-sm font-medium text-foreground mb-3">Notify via</p>
-            <label className="flex items-center gap-2.5 mb-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={notifyEmail}
-                onChange={(e) => setNotifyEmail(e.target.checked)}
-                className="rounded border-border"
-              />
-              <span className="text-sm text-foreground">Email</span>
-            </label>
-            <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Slack webhook URL (optional)</label>
-              <input
-                value={slackUrl}
-                onChange={(e) => setSlackUrl(e.target.value)}
-                className="w-full border border-border rounded-lg px-4 py-2.5 text-sm bg-card text-foreground focus:outline-none focus:border-primary"
-                placeholder="https://hooks.slack.com/services/..."
-              />
-            </div>
+            <p className="text-sm font-medium text-foreground">Delivery</p>
+            <p className="mt-1 text-sm text-muted-foreground">This rule creates an in-app alert history entry. Email and outbound webhook delivery are not enabled.</p>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
