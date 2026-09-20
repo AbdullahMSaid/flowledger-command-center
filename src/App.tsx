@@ -13,6 +13,7 @@ import NotFound from "./pages/NotFound.tsx";
 import { isSupabaseConfigured } from "./integrations/supabase/client";
 import ConfigurationRequired from "./components/auth/ConfigurationRequired";
 import { getLocalPreviewUser, isLocalPreviewAuthEnabled } from "./lib/localAuth";
+import { useAuth } from "./hooks/useAuth";
 
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const FlowDetail = lazy(() => import("./pages/FlowDetail.tsx"));
@@ -32,7 +33,13 @@ const SampleSpending = lazy(() => import("./pages/SampleSpending.tsx"));
 const queryClient = new QueryClient();
 
 const AuthenticatedRoute = ({ children }: { children: ReactNode }) => {
-  if (isSupabaseConfigured) return <>{children}</>;
+  const { user, loading } = useAuth(false);
+
+  if (isSupabaseConfigured) {
+    if (loading) return <div className="min-h-screen bg-background" />;
+    if (!user) return <Navigate to="/login" replace />;
+    return <>{children}</>;
+  }
   if (isLocalPreviewAuthEnabled && getLocalPreviewUser()) return <>{children}</>;
   if (isLocalPreviewAuthEnabled) return <Navigate to="/login" replace />;
   return <ConfigurationRequired />;
