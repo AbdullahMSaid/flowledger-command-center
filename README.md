@@ -341,16 +341,16 @@ The checked-in [`examples/guarded-agent.mjs`](examples/guarded-agent.mjs) uses a
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/flowledger.git
-cd flowledger
+git clone https://github.com/AbdullahMSaid/flowledger-command-center.git
+cd flowledger-command-center
 
 # Install dependencies
 npm install
 
 # Copy environment variables
-cp .env.example .env
+cp .env.example .env.local
 
-# Fill in your Supabase credentials in .env
+# Fill in your Supabase credentials in .env.local
 
 # Run the development server
 npm run dev
@@ -418,46 +418,30 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 Do not use the local preview account as a deployed credential. It is enabled only for a Vite development build with Supabase unconfigured.
 
 The current prototype does not claim email delivery, outbound webhooks, provider adapters, rate limiting, billing, or automatic business-outcome instrumentation. Those integrations should remain explicitly marked unavailable until implemented and tested.
-```
 
 ---
 
 ## Project structure
 
-```
-flowledger/
+```text
+flowledger-command-center/
 ├── src/
-│   ├── components/          # Shared UI components
-│   │   ├── ui/              # Base components (Button, Badge, Card, etc.)
-│   │   ├── FlowTable.tsx    # Dashboard flow table with status badges
-│   │   ├── MetricCard.tsx   # Summary stat cards
-│   │   ├── SpendChart.tsx   # Recharts bar chart
-│   │   └── SimulateButton.tsx
-│   ├── pages/
-│   │   ├── Landing.tsx      # Public landing page
-│   │   ├── Pricing.tsx      # Pricing comparison
-│   │   ├── Docs.tsx         # Technical documentation
-│   │   ├── Investors.tsx    # Business case / pitch content
-│   │   ├── Login.tsx
-│   │   ├── Signup.tsx
-│   │   ├── Dashboard.tsx    # Main authenticated view
-│   │   ├── FlowDetail.tsx   # Per-flow run history and stats
-│   │   ├── Analytics.tsx    # Spend and usage analytics
-│   │   └── Alerts.tsx       # Alert rules and history
-│   ├── lib/
-│   │   ├── supabase.ts      # Supabase client
-│   │   ├── statusEngine.ts  # Flow status derivation logic
-│   │   └── formatters.ts    # Currency, duration, date helpers
-│   └── hooks/
-│       ├── useFlows.ts      # Flow CRUD and realtime subscription
-│       ├── useRuns.ts       # Run history queries
-│       └── useMetrics.ts    # Aggregated dashboard metrics
+│   ├── components/          # Application and shared UI components
+│   ├── hooks/               # Authentication and UI hooks
+│   ├── integrations/        # Supabase browser client and generated types
+│   ├── lib/                 # Demo state, guard policy, metrics, and utilities
+│   ├── pages/               # Public, demo, and authenticated screens
+│   ├── test/                # Test setup and smoke tests
+│   └── App.tsx              # Routes and authentication boundaries
 ├── supabase/
 │   ├── functions/
-│   │   └── ingest/
-│   │       └── index.ts     # Edge function — ingest endpoint
-│   └── migrations/          # Database migrations
-├── public/
+│   │   ├── credentials/    # Issue scoped flow credentials
+│   │   ├── guard/          # Reserve budget before a provider call
+│   │   ├── ingest/         # Record workflow telemetry
+│   │   └── settle/         # Settle guarded reservations
+│   └── migrations/          # Additive PostgreSQL migrations
+├── docs/                    # Environment and launch runbooks
+├── examples/                # Deterministic guarded-agent example
 └── README.md
 ```
 
@@ -471,12 +455,12 @@ Any tool that can make an HTTP POST request at the end of a workflow execution.
 
 | Tool | Setup | Guide |
 |------|-------|-------|
-| Zapier | Add a Webhooks by Zapier step as the final action | [Docs →](/docs#zapier) |
-| n8n | Add an HTTP Request node at the end of your workflow | [Docs →](/docs#n8n) |
-| Make (Integromat) | Add an HTTP module as the final module | [Docs →](/docs#make) |
-| Claude Code | Use the shell wrapper script | [Docs →](/docs#claude-code) |
-| LangChain | Add a requests call in your chain's callback | [Docs →](/docs#langchain) |
-| Custom scripts | Any language with HTTP support | [Docs →](/docs#custom) |
+| Zapier | Add a Webhooks by Zapier step as the final action | [Docs →](https://flowledgerai.com/docs#zapier) |
+| n8n | Add an HTTP Request node at the end of your workflow | [Docs →](https://flowledgerai.com/docs#n8n) |
+| Make (Integromat) | Add an HTTP module as the final module | [Docs →](https://flowledgerai.com/docs#make) |
+| Claude Code | Use the shell wrapper script | [Docs →](https://flowledgerai.com/docs#claude-code) |
+| LangChain | Add a requests call in your chain's callback | [Docs →](https://flowledgerai.com/docs#langchain) |
+| Custom scripts | Any language with HTTP support | [Docs →](https://flowledgerai.com/docs#custom) |
 
 ### Planned — direct API integrations (v2)
 
@@ -560,8 +544,6 @@ MIT — see [LICENSE](LICENSE) for details.
 - [Supabase](https://supabase.com) — database, auth, real-time, and edge functions
 - [Netlify](https://netlify.com) — deployment and CDN
 - [Recharts](https://recharts.org) — charting
-- [Resend](https://resend.com) — transactional email
-- [Upstash](https://upstash.com) — serverless Redis for rate limiting
 - [Tailwind CSS](https://tailwindcss.com) — styling
 - [Lovable](https://lovable.dev) — rapid prototyping and initial build
 
