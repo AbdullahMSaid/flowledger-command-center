@@ -99,3 +99,4 @@ Local validation: `bun run typecheck`, `bun run test` (10 tests), and `bun run b
 - Created then archived Lab research assistant — Jared ($1/day, $15/month). It is absent from the active dashboard; its direct archived detail and accounting view remain available.
 - Live testing exposed and fixed ambiguous-column failures in both `set_flow_policy` and `archive_flow`; targeted migrations `20260920160000` and `20260920161500` are applied remotely.
 - Production authenticated Reviews loads as a live account with no demo replay link. Existing six workflows were not modified or archived.
+- Combined onboarding shipped in `24d0e7c`: Add workflow now registers source/owner/responsibility, then offers either a scoped real-reporting key or 24 labeled sample hourly runs in the same dialog. Live acceptance generated 24 runs / 31,419 tokens / $0.26 for a disposable n8n workflow, confirmed all 24 `synthetic_seed` activity rows after reload, then archived the disposable workflow.
