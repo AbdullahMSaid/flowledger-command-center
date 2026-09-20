@@ -1,5 +1,117 @@
 # FlowLedger implementation progress
 
+## Current production checkpoint — September 20, 2026
+
+This section is authoritative. Older sections below preserve implementation history and may describe gates that have since been completed.
+
+### Repository and deployment
+
+- Repository: `AbdullahMSaid/flowledger-command-center`, branch `main`.
+- Production: [flowledgerai.com](https://flowledgerai.com), deployed automatically by Netlify from `main`.
+- Supabase project: `oqteckpmfkbopbjznyie`; all checked-in migrations through `20260920170000_seed_workflow_sample_activity.sql` match the remote migration history.
+- Latest functional commit: `24d0e7c` (`feat: combine workflow creation and connection setup`).
+- Latest documentation commit: `c604720`.
+- Credentials and test-account passwords are intentionally absent from repository files.
+
+### Working product surfaces
+
+| Surface | Purpose | Data boundary |
+| --- | --- | --- |
+| `/demo` | Public simplified product demo | Local deterministic synthetic data |
+| `/demo/spending` | Demo spend view | Same isolated sample workspace |
+| `/demo/management` | Demo reviews/governance | Same isolated sample workspace |
+| `/demo/replay` | Runaway-agent guard replay | Synthetic only; no provider calls |
+| `/dashboard` | Signed-in overview and workflow inventory | Authenticated Supabase workspace |
+| `/flows/:id` | Selected workflow management | Authenticated, workspace-scoped data |
+| `/analytics` | Signed-in spend, runs, and token analysis | Authenticated Supabase workspace |
+| `/command-center` | Portfolio reviews, incidents, governance, and value evidence | Authenticated Supabase workspace |
+| `/setup` | Connection guidance | Authenticated shell and account context |
+| `/docs?mode=account` | Signed-in help | Account-context navigation |
+
+Demo routes never read account data. Signed-in routes require a real Supabase session and no longer substitute demo records when live queries fail.
+
+### Completed manager workflow
+
+1. **Add workflow** collects name, source/platform, model, owner/team, responsibility, and optional description.
+2. The same window immediately offers:
+   - **Connect real activity:** workflow-specific ingest endpoint plus one-time scoped reporting-key issuance. Provider master keys remain with the provider.
+   - **Generate sample activity:** 24 clearly labeled `synthetic_seed` hourly runs with varied tokens, duration, and spend. No provider is called.
+3. Selecting a workflow opens its own control surface with Overview, Activity, Spending, Controls, and Settings.
+4. **Edit workflow** changes name, owner/team label, platform, model, responsibility, and description, with persisted feedback.
+5. **Budgets** supports daily and monthly USD limits plus Monitor-only or Guard-connected protection.
+6. **Pause/resume** controls new guarded admissions and does not claim to stop an uninstrumented external provider.
+7. **Archive** removes a workflow from the active dashboard, blocks future guarded admissions, and preserves activity, spend, incidents, and its direct historical detail page.
+
+The workflow page—not the generic command center—is now the primary place to manage a selected agent. The authenticated command center no longer links users into the synthetic replay.
+
+### Live acceptance evidence
+
+The production account was used only with the user-authorized test credentials; credentials were not saved or printed in project files.
+
+Verified live:
+
+- Signed-out `/command-center` redirects to `/login`.
+- Signed-in `/command-center` renders authenticated workspace data without the prior `production_count` null crash.
+- Workflow creation persists after reload with the correct workspace and no automatic fabricated spend.
+- Identity/responsibility editing and daily/monthly budgets persist after reload.
+- Archive removes the workflow from the active list while its archived detail and accounting view remain accessible.
+- Settings retains Overview/Spending/Reviews/Settings/Help navigation.
+- Authenticated Reviews has no link into `/demo/replay`.
+- Combined onboarding generated 24 sample runs, 31,419 tokens, and $0.26 for a disposable n8n workflow. All 24 rows reloaded as `synthetic_seed`; the disposable workflow was then archived.
+- The six pre-existing account workflows were preserved.
+
+Live business-manager scenario now present:
+
+| Workflow | Owner / team | Source / model | Daily | Monthly | State |
+| --- | --- | --- | ---: | ---: | --- |
+| Out-of-office responder | Maya / Operations | Claude Code / Claude Sonnet | $2 | $30 | Active, monitor only |
+| Invoice extractor — OpenRouter | Eric / Sales | n8n / OpenRouter | $5 | $100 | Active, monitor only |
+| AI support triage | Sam / Engineering | Zapier / ChatGPT | $10 | $250 | Active, monitor only |
+| Lab research assistant — Jared | Jared / Lab | Custom / Claude | $1 | $15 | Archived; history preserved |
+
+### Production database and function repairs
+
+- `05d2250`: authenticated production routes now wait for the Supabase session and redirect signed-out users.
+- `ab660a0` plus `20260920143000`: Reviews null safety and canonical `Monitor only` insert/RLS contract.
+- `0af1462`: selected-workflow editing, budgets, connection section, pause/resume, and archive UI.
+- `eab1cd7` plus `20260920160000`: fixed ambiguous columns in `set_flow_policy`.
+- `634cc3f` plus `20260920161500`: fixed ambiguous columns in `archive_flow`.
+- `bf25acc`: business owner/team dashboard display and removal of authenticated demo-replay link.
+- `24d0e7c` plus `20260920170000`: combined creation/connection/sample onboarding.
+- Supabase `credentials` Edge Function is deployed. It revokes the previous active key when issuing a replacement and returns plaintext only once; hashes remain server-side.
+
+### Verification status
+
+Latest local checks passed:
+
+```bash
+bun run typecheck
+bun run test      # 5 files, 10 tests
+bun run build
+bun run lint      # zero errors; seven existing Fast Refresh warnings
+```
+
+Production browser acceptance covered desktop authentication, creation, editing, budgets, sample activity, reload persistence, command-center scope, archive, active-list removal, and archived history. Narrow/mobile authenticated lifecycle testing was not repeated after the latest onboarding change.
+
+### Honest remaining limitations
+
+- A generated reporting key and endpoint do not connect a provider automatically. The customer must configure Zapier, n8n, Make, Claude Code, or custom code to POST stable event IDs and real token/cost metadata.
+- The real scoped-key button is deployed but was not clicked during final acceptance because issuing a key intentionally revokes that workflow's previous key.
+- The three manager-scenario workflows are currently **Monitor only**. They show reported spend but cannot prevent a provider call until their runner uses the guard/reservation/settlement protocol and protection is changed to **Guard connected**.
+- No paid provider call was made. OpenRouter is represented as the selected model/provider label; no native OpenRouter adapter or automatic discovery is claimed.
+- Setup still contains older provider-specific instructional tabs. The new Add workflow window is the preferred connection entry point; remaining setup copy should eventually be reduced around that single path.
+- Archived workflows are preserved and directly addressable, but there is not yet a dedicated archived-workflows browser or restore action.
+- High-volume Analytics still caps its client query at 5,000 rows; server-side chart buckets remain future scale work.
+- Guard concurrency, settlement races, multi-workspace admin/member verification, and authenticated narrow-layout QA remain material production-hardening tasks.
+
+### Resume point
+
+1. Start by reading this section and `docs/LIVE_SITE_FIX_HANDOFF_2026-09-20.md`.
+2. Ask the user to trial Add workflow → real connection or sample activity → workflow Settings → budgets → archive.
+3. Do not alter the six older workflows or the three active manager-scenario workflows without explicit direction.
+4. For strategy, focus next on the smallest real provider reporting walkthrough and guard-connected proof, not a redesign or new billing system.
+5. Preserve unrelated local documentation/schema files currently outside the committed change set.
+
 ## Current phase
 
 Phase 6 — light-mode product simplification and local verification (implemented locally; remote schema/function deployment and database integration gates unverified).
