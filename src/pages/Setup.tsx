@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, CheckCircle, Copy, Check } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AppShell from "@/components/app/AppShell";
 
 const buildScript = (webhookUrl: string) => `#!/usr/bin/env bash
 # FlowLedger — Claude Code session tracker
@@ -495,7 +496,6 @@ const N8nTab = ({ userId }: { userId: string }) => {
 
 const Setup = () => {
   const { user, loading: authLoading, signOut } = useAuth();
-  const navigate = useNavigate();
 
   if (authLoading) {
     return (
@@ -506,24 +506,11 @@ const Setup = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="sticky top-0 z-50 flex items-center justify-between px-8 py-4 border-b border-border bg-background/95 backdrop-blur-sm">
-        <Link to="/" className="font-display text-[22px] tracking-tight">
-          Flow<span className="text-primary">Ledger</span>
-        </Link>
-        <div className="flex items-center gap-4">
-          <Link to="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Docs</Link>
-          <span className="text-sm text-muted-foreground">{user?.email}</span>
-          <button onClick={signOut} className="text-sm text-muted-foreground hover:text-foreground transition-colors">Sign out</button>
-        </div>
-      </nav>
-
-      <div className="max-w-[1100px] mx-auto px-8 py-10">
+    <AppShell userLabel={user?.email} workspaceLabel="Private workspace" onSignOut={signOut}>
+      <div className="max-w-[1100px] mx-auto">
         <div className="flex items-center gap-4 mb-8">
-          <button onClick={() => navigate("/dashboard")} className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
-            <ArrowLeft size={18} />
-          </button>
-          <h1 className="font-display text-3xl tracking-tight">Integrations</h1>
+          <Link to="/dashboard" className="p-2 rounded-lg hover:bg-secondary text-muted-foreground" aria-label="Back to overview"><ArrowLeft size={18} /></Link>
+          <div><h1 className="font-display text-3xl tracking-tight">Connection settings</h1><p className="mt-1 text-sm text-muted-foreground">Connect reporting after registering a workflow. Provider secrets stay with the provider.</p></div>
         </div>
 
         <Tabs defaultValue="claude-code">
@@ -552,7 +539,7 @@ const Setup = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </AppShell>
   );
 };
 
