@@ -407,6 +407,10 @@ export type Database = {
         Args: { p_flow_id: string; p_reason?: string | null }
         Returns: { archived_at: string; flow_enabled: boolean; control_state: string }[]
       }
+      seed_workflow_sample_activity: {
+        Args: { p_flow_id: string }
+        Returns: { run_count: number; token_count: number; cost_usd: number }[]
+      }
       get_workspace_members: {
         Args: { p_workspace_id: string }
         Returns: { member_id: string; user_id: string; role: string }[]

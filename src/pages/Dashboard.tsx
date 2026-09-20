@@ -66,7 +66,7 @@ export default function Dashboard() {
     const flowIds = sourceFlows.map(flow => flow.id);
     if (flowIds.length === 0) setChartData([]);
     else {
-      const runResponse = await supabase.from("runs").select("cost_usd, created_at, source").in("flow_id", flowIds).gte("created_at", start.toISOString()).not("source", "in", "(synthetic_demo,synthetic_seed)").order("created_at", { ascending: true });
+      const runResponse = await supabase.from("runs").select("cost_usd, created_at, source").in("flow_id", flowIds).gte("created_at", start.toISOString()).neq("source", "synthetic_demo").order("created_at", { ascending: true });
       if (runResponse.error) setChartData([]);
       else {
         const days = Array.from({ length: 7 }, (_, index) => { const d = new Date(start); d.setUTCDate(d.getUTCDate() + index); return d; });

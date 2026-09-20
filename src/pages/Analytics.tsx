@@ -25,7 +25,7 @@ export default function Analytics() {
     if (flowsResponse.error) { setError(flowsResponse.error.message); setLoading(false); return; }
     const flows = flowsResponse.data ?? []; const ids = flows.map(flow => flow.id);
     if (!ids.length) { setChart([]); setBreakdown([]); setLoading(false); return; }
-    const runsResponse = await supabase.from("runs").select("flow_id, cost_usd, token_count, created_at, source").in("flow_id", ids).gte("created_at", start.toISOString()).not("source", "in", "(synthetic_demo,synthetic_seed)").order("created_at", { ascending: true }).limit(5000);
+    const runsResponse = await supabase.from("runs").select("flow_id, cost_usd, token_count, created_at, source").in("flow_id", ids).gte("created_at", start.toISOString()).neq("source", "synthetic_demo").order("created_at", { ascending: true }).limit(5000);
     if (runsResponse.error) { setError(runsResponse.error.message); setLoading(false); return; }
     const runs = runsResponse.data ?? []; const dates = Array.from({ length: days }, (_, index) => { const value = new Date(start); value.setUTCDate(value.getUTCDate() + index); return value; });
     setChart(dates.map(date => { const key = date.toISOString().slice(0, 10); const selected = runs.filter(run => new Date(run.created_at).toISOString().slice(0, 10) === key); return { label: new Intl.DateTimeFormat("en-US", days === 7 ? { weekday: "short", timeZone: "UTC" } : { month: "short", day: "numeric", timeZone: "UTC" }).format(date), cost: selected.reduce((sum, run) => sum + Number(run.cost_usd), 0), runs: selected.length, tokens: selected.reduce((sum, run) => sum + Number(run.token_count), 0) }; }));
