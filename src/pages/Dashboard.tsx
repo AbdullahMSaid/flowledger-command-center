@@ -59,7 +59,8 @@ export default function Dashboard() {
     const sourceFlows = flowsResponse.data ?? [];
     setFlows(sourceFlows.map(flow => {
       const row = inventory.get(flow.id);
-      return { id: flow.id, name: flow.name, owner: flow.accountable_owner_member_id ? "Assigned member" : "Unassigned", team: flow.team_label ?? undefined, platform: flow.platform, model: flow.model || "Unknown", status: statusFor(flow, row), spend: row ? Number(row.period_cost_usd) : null, budget: flow.budget_limit === null ? null : Number(flow.budget_limit), protection: flow.protection_mode === "Guard connected" ? "Guard connected" : "Monitor only", lastRun: row?.last_run_at ?? undefined };
+      const [businessOwner, businessTeam] = (flow.team_label ?? "").split("·").map(value => value.trim());
+      return { id: flow.id, name: flow.name, owner: flow.accountable_owner_member_id ? "Workspace member" : businessOwner || "Unassigned", team: businessTeam || (businessOwner ? undefined : flow.team_label ?? undefined), platform: flow.platform, model: flow.model || "Unknown", status: statusFor(flow, row), spend: row ? Number(row.period_cost_usd) : null, budget: flow.budget_limit === null ? null : Number(flow.budget_limit), protection: flow.protection_mode === "Guard connected" ? "Guard connected" : "Monitor only", lastRun: row?.last_run_at ?? undefined };
     }));
     setSummary(summaryResponse.data as Summary);
     const flowIds = sourceFlows.map(flow => flow.id);
