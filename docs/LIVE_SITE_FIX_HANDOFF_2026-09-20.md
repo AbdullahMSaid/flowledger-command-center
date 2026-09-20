@@ -90,3 +90,12 @@ Keep this file updated with fixed / verified locally / verified live / blocked s
 | Full lifecycle, connection, navigation, demo, governance review | In progress | Not yet accepted live; existing records have not been modified. |
 
 Local validation: `bun run typecheck`, `bun run test` (10 tests), and `bun run build` passed after the first repair batch.
+
+### Live workflow acceptance — completed
+
+- Workflow detail now owns identity/responsibility editing, daily/monthly budgets, reporting connection, pause/resume, and archival. The generic command-center jump was removed.
+- Authenticated Settings retains the workspace shell. The live command center no longer links authenticated users into the synthetic replay.
+- Created and reloaded three active test-account workflows: Out-of-office responder (Maya · Operations, $2/day, $30/month), Invoice extractor — OpenRouter (Eric · Sales, $5/day, $100/month), and AI support triage (Sam · Engineering, $10/day, $250/month).
+- Created then archived Lab research assistant — Jared ($1/day, $15/month). It is absent from the active dashboard; its direct archived detail and accounting view remain available.
+- Live testing exposed and fixed ambiguous-column failures in both `set_flow_policy` and `archive_flow`; targeted migrations `20260920160000` and `20260920161500` are applied remotely.
+- Production authenticated Reviews loads as a live account with no demo replay link. Existing six workflows were not modified or archived.
