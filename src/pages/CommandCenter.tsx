@@ -369,8 +369,10 @@ const LiveCommandCenter = () => {
     ["Open anomalies", isLive && !liveSummary ? "Unavailable" : openIncidents.toLocaleString(), isLive ? (liveSummary ? "Persisted incidents" : "Aggregate query failed") : "1 needs intervention", "text-red-700"],
     ["Over budget", isLive ? (liveSummary ? liveOverBudget.toLocaleString() : "Unavailable") : "1", isLive ? (liveSummary ? "Current budget checks" : "Aggregate query failed") : "Out-of-office responder", "text-amber-700"],
   ];
-  const governance = isLive
+  const governance = isLive && liveSummary
     ? [["Production", liveSummary.production_count.toLocaleString()], ["Approved", liveSummary.approved_count.toLocaleString()], ["Missing owner", liveSummary.missing_owner_count.toLocaleString()], ["Overdue review", liveSummary.overdue_review_count.toLocaleString()]]
+    : isLive
+      ? [["Production", "Unavailable"], ["Approved", "Unavailable"], ["Missing owner", "Unavailable"], ["Overdue review", "Unavailable"]]
     : [["Production", "9"], ["Approved", "8"], ["Missing owner", "1"], ["Overdue review", "2"]];
   const memberLabel = (memberId: string | null) => {
     if (!memberId) return "Unassigned";

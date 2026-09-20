@@ -16,7 +16,7 @@ export default function AddFlowModal({ onClose, onCreated }: { onClose: () => vo
     if (!user) { setError("Your session has expired. Sign in again."); setLoading(false); return; }
     const { data: membership, error: membershipError } = await supabase.from("workspace_members").select("workspace_id").eq("user_id", user.id).limit(1).maybeSingle();
     if (membershipError || !membership) { setError(membershipError?.message ?? "No workspace is available for this account."); setLoading(false); return; }
-    const { data, error: insertError } = await supabase.from("flows").insert({ name: name.trim(), platform, model: model.trim(), user_id: user.id, created_by: user.id, workspace_id: membership.workspace_id, description: description.trim() || null, business_purpose: businessPurpose.trim() || null, team_label: teamLabel.trim() || null, environment: "experiment", approval_status: "pending", protection_mode: "monitor_only", flow_enabled: true, control_state: "running" }).select("id").single();
+    const { data, error: insertError } = await supabase.from("flows").insert({ name: name.trim(), platform, model: model.trim(), user_id: user.id, created_by: user.id, workspace_id: membership.workspace_id, description: description.trim() || null, business_purpose: businessPurpose.trim() || null, team_label: teamLabel.trim() || null, environment: "experiment", approval_status: "pending", protection_mode: "Monitor only", flow_enabled: true, control_state: "running" }).select("id").single();
     if (insertError || !data) setError(insertError?.message ?? "The flow could not be created."); else setCreatedId(data.id);
     setLoading(false);
   };
