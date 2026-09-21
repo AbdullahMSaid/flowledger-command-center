@@ -7,28 +7,34 @@ const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setNotice("");
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: window.location.origin },
     });
     if (error) {
-      setError(error.message);
+      setError(error.message === "Database error saving new user" ? "We couldn't create your workspace. Please try again in a moment." : error.message);
       setLoading(false);
-    } else {
+    } else if (data.session) {
       navigate("/dashboard");
+    } else {
+      setNotice("Check your email to confirm your account, then sign in.");
+      setLoading(false);
     }
   };
 
   const handleGoogleSignup = async () => {
     setError("");
+    setNotice("");
     setGoogleLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -97,6 +103,7 @@ const Signup = () => {
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
+          {notice && <p className="text-sm text-emerald-700">{notice}</p>}
           <button
             type="submit"
             disabled={loading}

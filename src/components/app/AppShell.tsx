@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { BarChart3, BookOpen, LayoutDashboard, LogOut, PlayCircle, RotateCcw, Settings2, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,15 @@ const navItems = [
   { to: "/setup", label: "Settings", icon: Settings2 },
   { to: "/docs", label: "Help", icon: BookOpen },
 ];
+
+const workspacePagePreloads: Record<string, () => Promise<unknown>> = {
+  "/dashboard": () => import("@/pages/Dashboard"),
+  "/analytics": () => import("@/pages/Analytics"),
+  "/command-center": () => import("@/pages/CommandCenter"),
+  "/setup": () => import("@/pages/Setup"),
+};
+
+const preloadPage = (path: string) => { void workspacePagePreloads[path]?.(); };
 
 type AppShellProps = {
   children: ReactNode;
@@ -26,6 +35,12 @@ export default function AppShell({ children, userLabel, workspaceLabel = "My wor
   const visibleNavItems = demo
     ? [{ to: "/demo", label: "Overview", icon: LayoutDashboard }, { to: "/demo/spending", label: "Spending", icon: BarChart3 }, { to: "/demo/management", label: "Reviews", icon: SlidersHorizontal }, { to: "/demo/replay?mode=demo", label: "Example replay", icon: PlayCircle }, helpItem]
     : preview ? [navItems[0], navItems[1], navItems[2], { to: "/demo/replay?mode=preview", label: "Example replay", icon: PlayCircle }, helpItem] : [...navItems.slice(0, 4), helpItem];
+  useEffect(() => {
+    if (demo || preview) return;
+    const warmPages = () => Object.keys(workspacePagePreloads).forEach(preloadPage);
+    const warmTimer = window.setTimeout(warmPages, 250);
+    return () => window.clearTimeout(warmTimer);
+  }, [demo, preview]);
   return (
     <div className="min-h-screen bg-[#f7f8fa] text-slate-950">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
@@ -40,7 +55,7 @@ export default function AppShell({ children, userLabel, workspaceLabel = "My wor
           </div>
           <nav className="ml-auto hidden items-center gap-1 md:flex" aria-label="Workspace navigation">
             {visibleNavItems.map(({ to, label, icon: Icon }) => (
-              <NavLink key={to} to={to} className={({ isActive }) => cn("inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors", isActive ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900")}>
+              <NavLink key={to} to={to} onMouseEnter={() => preloadPage(to)} onFocus={() => preloadPage(to)} className={({ isActive }) => cn("inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors", isActive ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900")}>
                 <Icon className="h-3.5 w-3.5" />{label}
               </NavLink>
             ))}

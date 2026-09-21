@@ -4,9 +4,23 @@ import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import { getLocalPreviewUser, isLocalPreviewAuthEnabled, signOutOfLocalPreview } from "@/lib/localAuth";
 import type { User } from "@supabase/supabase-js";
 
+let cachedUser: User | null | undefined;
+let sessionRequest: Promise<User | null> | null = null;
+
+const getCurrentUser = () => {
+  if (cachedUser !== undefined) return Promise.resolve(cachedUser);
+  if (!sessionRequest) {
+    sessionRequest = supabase.auth.getSession().then(({ data: { session } }) => {
+      cachedUser = session?.user ?? null;
+      return cachedUser;
+    }).finally(() => { sessionRequest = null; });
+  }
+  return sessionRequest;
+};
+
 export function useAuth(redirectIfUnauthenticated = true) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(() => cachedUser ?? null);
+  const [loading, setLoading] = useState(() => isSupabaseConfigured && cachedUser === undefined);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -21,17 +35,19 @@ export function useAuth(redirectIfUnauthenticated = true) {
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const nextUser = session?.user ?? null;
+      cachedUser = nextUser;
+      setUser(nextUser);
       setLoading(false);
-      if (!session?.user && redirectIfUnauthenticated) {
+      if (!nextUser && redirectIfUnauthenticated) {
         navigate("/login");
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    getCurrentUser().then((nextUser) => {
+      setUser(nextUser);
       setLoading(false);
-      if (!session?.user && redirectIfUnauthenticated) {
+      if (!nextUser && redirectIfUnauthenticated) {
         navigate("/login");
       }
     });
@@ -48,6 +64,7 @@ export function useAuth(redirectIfUnauthenticated = true) {
     }
     if (isSupabaseConfigured) {
       await supabase.auth.signOut();
+      cachedUser = null;
     }
     navigate("/login");
   };
