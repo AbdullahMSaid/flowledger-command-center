@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 type SetBudgetModalProps = {
@@ -17,6 +17,11 @@ const SetBudgetModal = ({ flowId, flowName, currentBudget, currentDailyBudget, c
   const [protectionMode, setProtectionMode] = useState(currentProtectionMode || "Monitor only");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape" && !loading) onClose(); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [loading, onClose]);
 
   const removeBudget = async () => {
     setLoading(true);
@@ -62,12 +67,12 @@ const SetBudgetModal = ({ flowId, flowName, currentBudget, currentDailyBudget, c
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { if (!loading) onClose(); }}>
       <div
         className="bg-card border border-border rounded-xl p-6 w-full max-w-[380px] shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="font-display text-xl tracking-tight mb-1">Set monthly budget</h2>
+        <h2 className="font-display text-xl tracking-tight mb-1">Set budgets</h2>
         <p className="text-sm text-muted-foreground mb-5 truncate">{flowName}</p>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -75,6 +80,7 @@ const SetBudgetModal = ({ flowId, flowName, currentBudget, currentDailyBudget, c
             <label className="text-sm text-muted-foreground mb-1 block">Budget (USD / month)</label>
             <input
               type="number"
+              autoFocus
               step="0.01"
               min="0"
               value={budget}

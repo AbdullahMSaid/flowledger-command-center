@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { BarChart3, BookOpen, LayoutDashboard, LogOut, PlayCircle, RotateCcw, Settings2, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -35,12 +35,6 @@ export default function AppShell({ children, userLabel, workspaceLabel = "My wor
   const visibleNavItems = demo
     ? [{ to: "/demo", label: "Overview", icon: LayoutDashboard }, { to: "/demo/spending", label: "Spending", icon: BarChart3 }, { to: "/demo/management", label: "Reviews", icon: SlidersHorizontal }, { to: "/demo/replay?mode=demo", label: "Example replay", icon: PlayCircle }, helpItem]
     : preview ? [navItems[0], navItems[1], navItems[2], { to: "/demo/replay?mode=preview", label: "Example replay", icon: PlayCircle }, helpItem] : [...navItems.slice(0, 4), helpItem];
-  useEffect(() => {
-    if (demo || preview) return;
-    const warmPages = () => Object.keys(workspacePagePreloads).forEach(preloadPage);
-    const warmTimer = window.setTimeout(warmPages, 250);
-    return () => window.clearTimeout(warmTimer);
-  }, [demo, preview]);
   return (
     <div className="min-h-screen bg-[#f7f8fa] text-slate-950">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">

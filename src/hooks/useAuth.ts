@@ -6,14 +6,16 @@ import type { User } from "@supabase/supabase-js";
 
 let cachedUser: User | null | undefined;
 let sessionRequest: Promise<User | null> | null = null;
+let authVersion = 0;
 
 const getCurrentUser = () => {
   if (cachedUser !== undefined) return Promise.resolve(cachedUser);
   if (!sessionRequest) {
+    const requestVersion = authVersion;
     sessionRequest = supabase.auth.getSession().then(({ data: { session } }) => {
-      cachedUser = session?.user ?? null;
-      return cachedUser;
-    }).finally(() => { sessionRequest = null; });
+      if (requestVersion === authVersion) cachedUser = session?.user ?? null;
+      return cachedUser ?? null;
+    }).catch(() => null).finally(() => { sessionRequest = null; });
   }
   return sessionRequest;
 };
@@ -36,6 +38,7 @@ export function useAuth(redirectIfUnauthenticated = true) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const nextUser = session?.user ?? null;
+      authVersion += 1;
       cachedUser = nextUser;
       setUser(nextUser);
       setLoading(false);
@@ -63,8 +66,9 @@ export function useAuth(redirectIfUnauthenticated = true) {
       return;
     }
     if (isSupabaseConfigured) {
-      await supabase.auth.signOut();
+      authVersion += 1;
       cachedUser = null;
+      await supabase.auth.signOut();
     }
     navigate("/login");
   };

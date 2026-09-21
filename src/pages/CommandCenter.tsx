@@ -18,6 +18,7 @@ import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import { isLocalPreviewAuthEnabled } from "@/lib/localAuth";
 import type { Database } from "@/integrations/supabase/types";
 import { calculateValueMetrics } from "@/lib/metrics/value";
+import { getWorkspaceMembership } from "@/lib/workspace";
 import SampleReviews from "@/pages/SampleReviews";
 
 type LiveSummary = {
@@ -201,20 +202,19 @@ const LiveCommandCenter = () => {
 
     let cancelled = false;
     const loadSummary = async () => {
-      const { data: membership, error: membershipError } = await supabase
-        .from("workspace_members")
-        .select("workspace_id, role")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (membershipError || !membership?.workspace_id) {
+      let membership;
+      try { membership = await getWorkspaceMembership(user.id); } catch (membershipError) {
         if (!cancelled) {
           setLiveSummary(null);
-          setLiveError(
-            membershipError?.message ??
-              "No workspace is provisioned for this account yet.",
-          );
+          setLiveError(membershipError instanceof Error ? membershipError.message : "No workspace is provisioned for this account yet.");
+        }
+        return;
+      }
+
+      if (!membership?.workspace_id) {
+        if (!cancelled) {
+          setLiveSummary(null);
+          setLiveError("No workspace is provisioned for this account yet.");
         }
         return;
       }

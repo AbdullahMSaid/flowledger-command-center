@@ -5,6 +5,7 @@ import AppShell from "@/components/app/AppShell";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { getWorkspaceMembership } from "@/lib/workspace";
 
 type Metric = "cost" | "runs" | "tokens";
 type ChartPoint = { label: string; cost: number; runs: number; tokens: number };
@@ -18,10 +19,11 @@ export default function Analytics() {
   const [days, setDays] = useState(7); const [metric, setMetric] = useState<Metric>("cost"); const [chart, setChart] = useState<ChartPoint[]>([]); const [breakdown, setBreakdown] = useState<Breakdown[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null); const [workspace, setWorkspace] = useState("My workspace");
   const load = useCallback(async () => {
     if (!user) return; setLoading(true); setError(null); const start = startUtcDaysAgo(days);
-    const membership = await supabase.from("workspace_members").select("workspace_id, workspaces(name)").eq("user_id", user.id).limit(1).maybeSingle();
-    if (membership.error || !membership.data?.workspace_id) { setError(membership.error?.message ?? "No workspace membership found."); setLoading(false); return; }
-    const workspaceRow = membership.data.workspaces as { name?: string } | null; if (workspaceRow?.name) setWorkspace(workspaceRow.name);
-    const flowsResponse = await supabase.from("flows").select("id, name, platform").eq("workspace_id", membership.data.workspace_id).is("archived_at", null);
+    let membership;
+    try { membership = await getWorkspaceMembership(user.id); } catch (membershipError) { setError(membershipError instanceof Error ? membershipError.message : "No workspace membership found."); setLoading(false); return; }
+    if (!membership?.workspace_id) { setError("No workspace membership found."); setLoading(false); return; }
+    if (membership.workspaces?.name) setWorkspace(membership.workspaces.name);
+    const flowsResponse = await supabase.from("flows").select("id, name, platform").eq("workspace_id", membership.workspace_id).is("archived_at", null);
     if (flowsResponse.error) { setError(flowsResponse.error.message); setLoading(false); return; }
     const flows = flowsResponse.data ?? []; const ids = flows.map(flow => flow.id);
     if (!ids.length) { setChart([]); setBreakdown([]); setLoading(false); return; }

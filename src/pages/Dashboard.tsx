@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import AppShell from "@/components/app/AppShell";
 import OperationsDashboard, { type OperationsFlow } from "@/components/dashboard/OperationsDashboard";
 import AddFlowModal from "@/components/dashboard/AddFlowModal";
+import { getWorkspaceMembership } from "@/lib/workspace";
 
 type InventoryRow = Database["public"]["Functions"]["get_workspace_inventory"]["Returns"][number];
 type Summary = { spend_usd?: number; run_count?: number; active_workflow_count?: number; open_incident_count?: number; over_budget_count?: number };
@@ -36,14 +37,19 @@ export default function Dashboard() {
     setError(null);
     const start = startUtcDaysAgo(7);
     const end = new Date();
-    const membershipResponse = await supabase.from("workspace_members").select("workspace_id, workspaces(name)").eq("user_id", user.id).limit(1).maybeSingle();
-    if (membershipResponse.error || !membershipResponse.data?.workspace_id) {
+    let membership;
+    try { membership = await getWorkspaceMembership(user.id); } catch (membershipError) {
       setFlows([]); setSummary(null); setChartData([]); setLoading(false);
-      setError(membershipResponse.error?.message ?? "No workspace membership is available for this account.");
+      setError(membershipError instanceof Error ? membershipError.message : "No workspace membership is available for this account.");
       return;
     }
-    const workspaceId = membershipResponse.data.workspace_id;
-    const workspace = membershipResponse.data.workspaces as { name?: string } | null;
+    if (!membership?.workspace_id) {
+      setFlows([]); setSummary(null); setChartData([]); setLoading(false);
+      setError("No workspace membership is available for this account.");
+      return;
+    }
+    const workspaceId = membership.workspace_id;
+    const workspace = membership.workspaces;
     if (workspace?.name) setWorkspaceLabel(workspace.name);
     const [flowsResponse, inventoryResponse, summaryResponse] = await Promise.all([
       supabase.from("flows").select("*").eq("workspace_id", workspaceId).is("archived_at", null).order("created_at", { ascending: false }),

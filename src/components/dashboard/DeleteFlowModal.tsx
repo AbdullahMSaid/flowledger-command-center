@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 type Props = {
@@ -11,6 +11,11 @@ type Props = {
 const DeleteFlowModal = ({ flowId, flowName, onClose, onDeleted }: Props) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape" && !loading) onClose(); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [loading, onClose]);
 
   const handleArchive = async () => {
     setLoading(true);
@@ -23,7 +28,7 @@ const DeleteFlowModal = ({ flowId, flowName, onClose, onDeleted }: Props) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { if (!loading) onClose(); }}>
       <div
         className="bg-card border border-border rounded-xl p-6 w-full max-w-[380px] shadow-lg"
         onClick={(e) => e.stopPropagation()}
@@ -37,6 +42,7 @@ const DeleteFlowModal = ({ flowId, flowName, onClose, onDeleted }: Props) => {
         <div className="flex items-center gap-3">
           <button
             onClick={onClose}
+            autoFocus
             className="flex-1 border border-border py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary transition-colors"
           >
             Cancel
