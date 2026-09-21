@@ -607,8 +607,9 @@ const LiveCommandCenter = () => {
       ? `${member.role} · ${member.user_id.slice(0, 8)}`
       : `Member · ${memberId.slice(0, 8)}`;
   };
+  const activeLiveInventory = liveInventory.filter((flow) => !flow.archived_at);
   const displayInventory = isLiveWorkspace
-    ? liveInventory.map((flow) => ({
+    ? activeLiveInventory.map((flow) => ({
         id: flow.flow_id,
         name: flow.name,
         platform: flow.platform,
@@ -630,7 +631,7 @@ const LiveCommandCenter = () => {
       }))
     : inventory;
   const liveFlowById = new Map(
-    liveInventory.map((flow) => [flow.flow_id, flow]),
+    activeLiveInventory.map((flow) => [flow.flow_id, flow]),
   );
   const filteredInventory = displayInventory.filter(
     (flow) =>
@@ -1045,7 +1046,7 @@ const LiveCommandCenter = () => {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  const liveFlow = liveInventory.find(
+                                  const liveFlow = activeLiveInventory.find(
                                     (candidate) =>
                                       candidate.flow_id === flow.id,
                                   );
@@ -1074,7 +1075,7 @@ const LiveCommandCenter = () => {
                 </table>
               </div>
             </div>
-            {isLive && liveInventory.length > 0 && (
+            {isLive && activeLiveInventory.length > 0 && (
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="text-xs font-semibold uppercase tracking-[1.5px] text-slate-500">
                   Value coverage
@@ -1084,7 +1085,7 @@ const LiveCommandCenter = () => {
                   and are never presented as full business ROI.
                 </p>
                 <div className="mt-4 space-y-2">
-                  {liveInventory.map((flow) => (
+                  {activeLiveInventory.map((flow) => (
                     <div
                       key={flow.flow_id}
                       className="flex flex-col gap-2 rounded-xl border border-slate-200 p-3 sm:flex-row sm:items-center sm:justify-between"
@@ -1208,10 +1209,10 @@ const LiveCommandCenter = () => {
               </div>
               <div className="mt-4 space-y-3">
                 {isLive ? (
-                  liveInventory.filter(
+                  activeLiveInventory.filter(
                     (flow) => flow.approval_status === "pending",
                   ).length > 0 ? (
-                    liveInventory
+                    activeLiveInventory
                       .filter((flow) => flow.approval_status === "pending")
                       .map((flow) => (
                         <div
@@ -1350,7 +1351,7 @@ const LiveCommandCenter = () => {
               </div>
               <div className="mt-3 text-[11px] text-slate-500">
                 {isLive
-                  ? `Value estimates supplied for ${liveSummary?.value_coverage_count ?? 0} of ${liveInventory.length || activeWorkflows} workflows.`
+                  ? `Value estimates supplied for ${liveSummary?.value_coverage_count ?? 0} of ${activeLiveInventory.length || activeWorkflows} workflows.`
                   : "Value estimates supplied for 1 of 4 demo workflows."}
               </div>
             </div>
