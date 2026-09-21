@@ -135,6 +135,8 @@ For a local/staging two-user permission test, supply the service-role key and tw
 
 These commands are deployment instructions. They were not run during this build.
 
+For the complete separation between browser-only local preview work and the live Supabase/Netlify release path, see [ENVIRONMENTS.md](ENVIRONMENTS.md).
+
 ## 60-second recording script
 
 1. Open `/demo` and identify the synthetic-only scope.

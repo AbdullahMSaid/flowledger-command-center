@@ -19,7 +19,7 @@ const Signup = () => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
     });
     if (error) {
       setError(error.message === "Database error saving new user" ? "We couldn't create your workspace. Please try again in a moment." : error.message);
