@@ -69,10 +69,10 @@ const Navbar = () => {
             </Link>
           ) : (
             <Link
-              to="/demo"
+              to="/login"
               className="bg-foreground text-background px-5 py-2.5 rounded-lg text-sm font-medium tracking-tight hover:opacity-90 transition-opacity"
             >
-              Explore sample →
+              Sign in →
             </Link>
           )}
           {/* Mobile menu toggle */}
