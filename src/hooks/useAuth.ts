@@ -9,7 +9,7 @@ let sessionRequest: Promise<User | null> | null = null;
 let authVersion = 0;
 
 const getCurrentUser = () => {
-  if (cachedUser !== undefined) return Promise.resolve(cachedUser);
+  if (cachedUser) return Promise.resolve(cachedUser);
   if (!sessionRequest) {
     const requestVersion = authVersion;
     sessionRequest = supabase.auth.getSession().then(({ data: { session } }) => {
@@ -22,7 +22,7 @@ const getCurrentUser = () => {
 
 export function useAuth(redirectIfUnauthenticated = true) {
   const [user, setUser] = useState<User | null>(() => cachedUser ?? null);
-  const [loading, setLoading] = useState(() => isSupabaseConfigured && cachedUser === undefined);
+  const [loading, setLoading] = useState(() => isSupabaseConfigured && !cachedUser);
   const navigate = useNavigate();
 
   useEffect(() => {

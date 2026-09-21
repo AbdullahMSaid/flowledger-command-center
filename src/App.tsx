@@ -45,6 +45,16 @@ const AuthenticatedRoute = ({ children }: { children: ReactNode }) => {
   return <ConfigurationRequired />;
 };
 
+const SignedOutRoute = ({ children }: { children: ReactNode }) => {
+  const { user, loading } = useAuth(false);
+
+  if (isSupabaseConfigured && loading) return <div className="min-h-screen bg-background" />;
+  if (user || (isLocalPreviewAuthEnabled && getLocalPreviewUser())) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -60,8 +70,8 @@ const App = () => (
             <Route path="/demo/replay" element={<Demo />} />
             <Route path="/demo/flows/:id" element={<SampleFlowDetail mode="demo" />} />
             <Route path="/command-center" element={<AuthenticatedRoute><CommandCenter /></AuthenticatedRoute>} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+            <Route path="/login" element={<SignedOutRoute><Login /></SignedOutRoute>} />
+            <Route path="/signup" element={<SignedOutRoute><Signup /></SignedOutRoute>} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/dashboard" element={<AuthenticatedRoute>{isSupabaseConfigured ? <Dashboard /> : <LocalPreviewDashboard />}</AuthenticatedRoute>} />
