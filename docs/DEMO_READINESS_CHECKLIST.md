@@ -13,7 +13,7 @@ This is a factual release checklist. “Live verified” means an observed produ
 | Workspace navigation | Dashboard, Spending, and Reviews each queried the same membership row after navigation. | Membership lookup is shared per signed-in user and retries after an error. | `src/lib/workspace.ts`; consumers updated. |
 | JavaScript delivery | Main production entry was 539 kB minified / 159 kB gzip. | Entry is 122 kB minified / 35 kB gzip; React, Supabase, Radix, icons, and charts are separately cacheable. | Matching local production builds; chart code remains a lazy 372 kB chunk. |
 | Connection setup | Generic Settings had an old flow-creation path with out-of-date, unauthenticated examples. | Connections are explicitly workflow-specific. Generic Settings explains the path; `?flow=` returns to that workflow’s Settings tab. | `src/pages/Setup.tsx`, `src/pages/FlowDetail.tsx`. |
-| Archived workflows in Reviews | Archived workflows still looked active in management lists and review queues. | Active management, value coverage, and review queues exclude archived workflows; archived history remains in database accounting. | Live authenticated QA found the issue; `src/pages/CommandCenter.tsx` fix is pending this deployment. |
+| Archived workflows in Reviews | Archived workflows still looked active in management lists and review queues. | Active management, value coverage, and review queues exclude archived workflows; archived history remains in database accounting. | Live authenticated QA after `6f8f2cd`: 9 active records displayed; two archived records no longer appeared. |
 | Public CTA | Header “Explore sample” sent signed-out visitors to Sign up. | It opens the public demo, consistent with the label. | `src/components/landing/Navbar.tsx`. |
 | Modal interaction | Add, archive, and budget dialogs had no Escape handling; archive/budget could close during a request. | Escape works while idle; archive/budget dialogs cannot dismiss mid-request; initial focus is present for the destructive/budget dialog. | Modal components. |
 
@@ -23,7 +23,7 @@ This is a factual release checklist. “Live verified” means an observed produ
 | --- | --- | --- |
 | Public landing, demo and replay isolation | Pass locally; previously live accepted | No account data is used by demo routes. Re-run after this deployment. |
 | Signed-out private routes | Pass previously live | `/command-center` redirects to login. Re-run after this deployment. |
-| Existing authenticated workspace and Reviews | Pass previously live | Reviews null-aggregate failure fixed in prior production work. Must re-check after current deploy. |
+| Existing authenticated workspace and Reviews | Pass live | Live authenticated QA loaded Overview, workflow detail, Settings, and Reviews with no console errors. |
 | Add → configure → sample activity → archive | Pass previously live | Prior acceptance used a disposable flow and preserved existing workflows. Re-run after current deploy only with a disposable flow. |
 | New email / Google signup | Database repair deployed; browser acceptance pending | Creating a new external account was intentionally not automated. Test manually with a fresh address after deployment. |
 | Real provider reporting | Not verified | Requires a customer-controlled provider/workflow and scoped credential; no paid call was made. |
